@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getAssets, CATEGORY_LABELS, type Asset } from '../api';
+import { getAssets, getUsers, CATEGORY_LABELS, type Asset, type User } from '../api';
 import { useModule } from '../moduleContext';
 import { UserCheck, Search, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -8,13 +8,17 @@ const Responsibles = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedResponsibles, setExpandedResponsibles] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLoading(true);
-    getAssets(module)
-      .then((data) => setAssets(data))
+    Promise.all([getAssets(module), getUsers()])
+      .then(([assetsData, usersData]) => {
+        setAssets(assetsData);
+        setUsers(usersData);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [module]);
@@ -35,12 +39,21 @@ const Responsibles = () => {
     return groups;
   }, [assets]);
 
-  // Filtrar responsables basado en el buscador
+  // Filtrar responsables basado en el buscador y si son usuarios reales (con foto)
   const filteredResponsibles = useMemo(() => {
+    // Validamos que el responsable exista en la tabla de usuarios con foto
+    const validResponsibles = new Set(
+      users.filter(u => u.photo_url && u.photo_url.trim() !== '').map(u => u.full_name.trim().toLowerCase())
+    );
+
     return Object.keys(groupedAssets)
-      .filter(name => name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(name => {
+        const isRealUser = validResponsibles.has(name.toLowerCase());
+        const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
+        return isRealUser && matchesSearch;
+      })
       .sort((a, b) => a.localeCompare(b));
-  }, [groupedAssets, searchTerm]);
+  }, [groupedAssets, searchTerm, users]);
 
   const toggleResponsible = (name: string) => {
     setExpandedResponsibles(prev => ({

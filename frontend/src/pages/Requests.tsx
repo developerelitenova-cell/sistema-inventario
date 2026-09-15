@@ -18,6 +18,7 @@ const Requests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Record<number, string>>({});
+  const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
   const [exitPass, setExitPass] = useState<Record<number, boolean>>({});
   const [processingId, setProcessingId] = useState<number | null>(null);
 
@@ -157,19 +158,32 @@ const Requests = () => {
 
                 <RequestCommentThread requestId={req.id} />
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <select
-                    className="input-field"
-                    style={{ flex: 1, minWidth: '220px' }}
-                    value={selectedAsset[req.id] ?? ''}
-                    onChange={(e) => setSelectedAsset({ ...selectedAsset, [req.id]: e.target.value })}
-                  >
-                    <option value="">
-                      {options.length === 0 ? 'No hay activos disponibles de esa categoría' : 'Elegir activo disponible...'}
-                    </option>
-                    {options.map(a => (
-                      <option key={a.id} value={a.id}>{a.unique_code} — {a.description}</option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '220px' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por código o descripción..."
+                      className="input-field py-2"
+                      value={searchTerms[req.id] || ''}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, [req.id]: e.target.value })}
+                    />
+                    <select
+                      className="input-field"
+                      value={selectedAsset[req.id] ?? ''}
+                      onChange={(e) => setSelectedAsset({ ...selectedAsset, [req.id]: e.target.value })}
+                    >
+                      <option value="">
+                        {options.length === 0 ? 'No hay activos disponibles de esa categoría' : 'Elegir activo disponible...'}
+                      </option>
+                      {options
+                        .filter(a => {
+                          const term = (searchTerms[req.id] || '').toLowerCase();
+                          return a.unique_code.toLowerCase().includes(term) || (a.description || '').toLowerCase().includes(term);
+                        })
+                        .map(a => (
+                        <option key={a.id} value={a.id}>{a.unique_code} — {a.description}</option>
+                      ))}
+                    </select>
+                  </div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
                     <input
                       type="checkbox"
@@ -186,8 +200,7 @@ const Requests = () => {
                     <Check size={16} /> Asignar
                   </button>
                   <button
-                    className="btn"
-                    style={{ background: 'var(--danger-color)', color: 'white' }}
+                    className="btn bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors"
                     disabled={processingId === req.id}
                     onClick={() => handleReject(req)}
                   >

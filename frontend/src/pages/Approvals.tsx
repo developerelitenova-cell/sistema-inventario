@@ -111,8 +111,7 @@ const Approvals = () => {
               {loan.status === 'pending' && canApprove ? (
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button
-                    className="btn"
-                    style={{ background: 'var(--danger-color)', color: 'white' }}
+                    className="btn bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors"
                     disabled={processingId === loan.id}
                     onClick={() => handleApproval(loan.id, false)}
                   >

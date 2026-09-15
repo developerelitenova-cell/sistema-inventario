@@ -237,6 +237,7 @@ class AssetRequest(BaseModel):
 
     requester: User
     reviewed_by: Optional[User] = None
+    comments: List["RequestComment"] = []
 
     class Config:
         from_attributes = True
@@ -270,3 +271,6 @@ class ActivityLog(BaseModel):
 
     class Config:
         from_attributes = True
+
+AssetRequest.model_rebuild()
+

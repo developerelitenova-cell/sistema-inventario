@@ -10,6 +10,7 @@ import {
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
 import AssetEditModal from '../components/AssetEditModal';
+import AssetViewModal from '../components/AssetViewModal';
 import RequestLoanModal from '../components/RequestLoanModal';
 import RequestCommentThread from '../components/RequestCommentThread';
 import ReturnAssetModal from '../components/ReturnAssetModal';
@@ -253,6 +254,7 @@ const CatalogView = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [viewingAsset, setViewingAsset] = useState<Asset | null>(null);
   const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
   const [requestingAsset, setRequestingAsset] = useState<Asset | null>(null);
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
@@ -340,6 +342,10 @@ const CatalogView = () => {
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--danger-color)' }}>
           Error al cargar activos: {error}
         </div>
+      ) : filteredAssets.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+          No se han creado activos en esta área.
+        </div>
       ) : (
         <div className="grid-cards">
           {filteredAssets.map(asset => (
@@ -371,6 +377,14 @@ const CatalogView = () => {
                       <CornerDownLeft size={14} />
                     </button>
                   )}
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '6px' }}
+                    onClick={() => setViewingAsset(asset)}
+                    title="Ver detalles"
+                  >
+                    <Info size={14} />
+                  </button>
                   <button
                     className="btn btn-outline"
                     style={{ padding: '6px' }}
@@ -410,6 +424,13 @@ const CatalogView = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {viewingAsset && (
+        <AssetViewModal
+          asset={viewingAsset}
+          onClose={() => setViewingAsset(null)}
+        />
       )}
 
       {editingAsset && (

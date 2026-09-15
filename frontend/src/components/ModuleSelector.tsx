@@ -13,7 +13,6 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   const { module, setModule } = useModule();
   const { warehouses, reload } = useWarehouses();
   const currentUser = getCachedUser();
-  const isAdmin = currentUser?.role === 'admin';
   const isMaster = isMasterAdmin(currentUser);
 
   const [renamingId, setRenamingId] = useState<number | null>(null);
@@ -124,7 +123,7 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
                 {isActive && <Layers size={16} />}
                 {w.name}
               </button>
-              {isAdmin && (
+              {isMaster && (
                 <button
                   type="button"
                   title="Renombrar bodega"

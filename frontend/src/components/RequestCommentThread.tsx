@@ -19,7 +19,11 @@ const RequestCommentThread = ({ requestId }: RequestCommentThreadProps) => {
 
   const load = () => {
     getRequestComments(requestId)
-      .then((data) => { setComments(data); setLoaded(true); })
+      .then((data) => { 
+        setComments(data); 
+        setLoaded(true); 
+        localStorage.setItem(`read_msg_${requestId}`, new Date().toISOString());
+      })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   };
 
@@ -36,6 +40,7 @@ const RequestCommentThread = ({ requestId }: RequestCommentThreadProps) => {
     try {
       const created = await addRequestComment(requestId, message.trim());
       setComments([...comments, created]);
+      localStorage.setItem(`read_msg_${requestId}`, new Date().toISOString());
       setMessage('');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

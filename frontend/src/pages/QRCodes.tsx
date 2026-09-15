@@ -41,6 +41,10 @@ const QRCodes = () => {
   }, [module]);
 
   const handleGenerateBatch = async () => {
+    if (!batchModule) {
+      setBatchError("Debe seleccionar un módulo para generar los códigos QR. Sugerencia: Seleccione una bodega en el desplegable 'Módulo'.");
+      return;
+    }
     setGenerating(true);
     setBatchError(null);
     try {
@@ -92,6 +96,7 @@ const QRCodes = () => {
                 setPrefix(suggestPrefix(m));
               }}
             >
+              <option value="">Seleccione un módulo</option>
               {warehouses.map((w) => (
                 <option key={w.key} value={w.key}>{w.name}</option>
               ))}

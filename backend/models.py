@@ -234,6 +234,7 @@ class AssetRequest(Base):
     requester = relationship("User", foreign_keys=[requester_id])
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
     resulting_loan = relationship("Loan")
+    comments = relationship("RequestComment", backref="asset_request", order_by="RequestComment.created_at")
 
 
 class RequestComment(Base):

@@ -429,6 +429,7 @@ export interface AssetRequest {
   review_notes: string | null;
   requester: User;
   reviewed_by: User | null;
+  comments?: RequestComment[];
 }
 
 export const createAssetRequest = (categoryRequested: Category | undefined, description: string, module?: string) =>
