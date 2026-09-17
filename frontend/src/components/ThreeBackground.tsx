@@ -1,10 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+// @ts-ignore
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
+// @ts-ignore
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
+// @ts-ignore
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+// @ts-ignore
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+// @ts-ignore
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
+// @ts-ignore
 import { CopyShader } from 'three/examples/jsm/shaders/CopyShader';
 
 export default function ThreeBackground() {
@@ -40,7 +46,6 @@ export default function ThreeBackground() {
     const pointerStrength = 0.9;
 
     const Lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     function hexToVec3(hex: string) {
       const n = parseInt(hex.slice(1), 16);
       return new THREE.Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
