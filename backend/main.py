@@ -35,7 +35,7 @@ def verify_password(x_app_password: Optional[str] = Header(default=None)):
 
 app = FastAPI(
     title="Control de Inventario y Activos",
-    dependencies=[Depends(verify_password)],
+    # dependencies=[Depends(verify_password)], # Removido porque se quitó la clave global en frontend
 )
 
 raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
@@ -47,11 +47,14 @@ else:
         "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
+        "https://sistema-inventario-nu.vercel.app",
+        "https://sistema-inventario-frontend.vercel.app"
     ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app", # Permitir dinámicamente cualquier subdominio de Vercel
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
