@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import AuthGate from './components/AuthGate';
 import LoginGate, { getCachedUser } from './components/LoginGate';
 import { ModuleProvider } from './moduleContext';
 import { WarehouseProvider } from './warehouseContext';
@@ -57,25 +56,23 @@ function AppShell() {
 
 function App() {
   return (
-    <AuthGate>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/*"
-            element={
-              <LoginGate>
-                <WarehouseProvider>
-                  <ModuleProvider>
-                    <AppShell />
-                  </ModuleProvider>
-                </WarehouseProvider>
-              </LoginGate>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthGate>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/*"
+          element={
+            <LoginGate>
+              <WarehouseProvider>
+                <ModuleProvider>
+                  <AppShell />
+                </ModuleProvider>
+              </WarehouseProvider>
+            </LoginGate>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
