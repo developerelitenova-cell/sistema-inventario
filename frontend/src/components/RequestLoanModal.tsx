@@ -14,7 +14,7 @@ const RequestLoanModal = ({ asset, onClose, onRequested }: RequestLoanModalProps
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const accessories = [asset.accessory_1, asset.accessory_2, asset.accessory_3].filter(Boolean);
+  const accessories = asset.accessories || [];
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -57,7 +57,7 @@ const RequestLoanModal = ({ asset, onClose, onRequested }: RequestLoanModalProps
               <Package size={14} /> Incluye:
             </div>
             <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {accessories.map((a, i) => <li key={i}>{a}</li>)}
+              {accessories.map((a, i) => <li key={i}>{a.name} {a.is_linked_asset && a.linked_asset_code ? `(QR: ${a.linked_asset_code})` : ''}</li>)}
             </ul>
           </div>
         )}

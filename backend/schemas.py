@@ -3,6 +3,11 @@ from typing import Optional, List
 from datetime import datetime
 from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum, InventoryTypeEnum
 
+class AccessoryItem(BaseModel):
+    name: str
+    is_linked_asset: bool = False
+    linked_asset_code: Optional[str] = None
+
 class Warehouse(BaseModel):
     id: int
     key: str
@@ -60,6 +65,10 @@ class AuthResponse(BaseModel):
     user: User
     generated_password: Optional[str] = None
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class RolePermission(BaseModel):
     id: int
     cargo: str
@@ -79,9 +88,7 @@ class AssetBase(BaseModel):
     area: Optional[str] = None
     responsible_name: Optional[str] = None
     value: Optional[float] = None
-    accessory_1: Optional[str] = None
-    accessory_2: Optional[str] = None
-    accessory_3: Optional[str] = None
+    accessories: List[AccessoryItem] = []
     observations: Optional[str] = None
     appsheet_photo_ref: Optional[str] = None
     inventory_type: InventoryTypeEnum = InventoryTypeEnum.ACTIVOS
@@ -100,9 +107,7 @@ class AssetCreate(BaseModel):
     module: str
     area: Optional[str] = None
     responsible_name: Optional[str] = None
-    accessory_1: Optional[str] = None
-    accessory_2: Optional[str] = None
-    accessory_3: Optional[str] = None
+    accessories: List[AccessoryItem] = []
     observations: Optional[str] = None
     inventory_type: Optional[InventoryTypeEnum] = None
     category: Optional[CategoryEnum] = None
@@ -128,9 +133,7 @@ class AssetUpdate(BaseModel):
     area: Optional[str] = None
     responsible_name: Optional[str] = None
     value: Optional[float] = None
-    accessory_1: Optional[str] = None
-    accessory_2: Optional[str] = None
-    accessory_3: Optional[str] = None
+    accessories: Optional[List[AccessoryItem]] = None
     observations: Optional[str] = None
     inventory_type: Optional[InventoryTypeEnum] = None
     category: Optional[CategoryEnum] = None
@@ -141,6 +144,7 @@ class LoanBase(BaseModel):
     asset_id: int
     borrower_id: int
     reason: Optional[str] = None
+    borrowed_accessories: Optional[List[AccessoryItem]] = None
 
 class LoanCreate(BaseModel):
     asset_id: int
@@ -165,6 +169,7 @@ class Loan(LoanBase):
     condition_status: Optional[str] = None
     security_authorization: Optional[str] = None
     signature_ref: Optional[str] = None
+    borrowed_accessories: Optional[List[AccessoryItem]] = None
     security_signature_url: Optional[str] = None
 
     asset: Asset

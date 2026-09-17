@@ -14,11 +14,15 @@ export default function SecurityExitPass() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
+  // Accessories state
+  const [selectedAccessories, setSelectedAccessories] = useState<boolean[]>([]);
+
   useEffect(() => {
     if (id) {
       getLoan(parseInt(id))
         .then((data) => {
           setLoan(data);
+          setSelectedAccessories((data.asset.accessories || []).map(() => true));
           setLoading(false);
         })
         .catch((err) => {
@@ -64,8 +68,9 @@ export default function SecurityExitPass() {
     if (!canvasRef.current) return;
     const signatureBase64 = canvasRef.current.toDataURL("image/png");
     
+    const finalAccessories = (loan.asset.accessories || []).filter((_, i) => selectedAccessories[i]);
     try {
-      await checkoutLoanSecurity(loan!.id, signatureBase64);
+      await checkoutLoanSecurity(loan!.id, signatureBase64, finalAccessories);
       alert("Salida confirmada y registrada en el sistema.");
       navigate("/scanner");
     } catch (err: any) {
@@ -157,6 +162,35 @@ export default function SecurityExitPass() {
                     {loan.status.toUpperCase()}
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-400">Accesorios (Confirmar salida)</p>
+                {loan.asset.accessories && loan.asset.accessories.length > 0 ? (
+                  <ul className="mt-2 space-y-2 bg-black/20 p-3 rounded">
+                    {loan.asset.accessories.map((acc, i) => (
+                      <li key={i} className="flex items-center text-white">
+                        <input 
+                          type="checkbox" 
+                          className="mr-3 w-5 h-5 accent-[var(--gold)]"
+                          checked={isCheckedOut ? (loan.borrowed_accessories?.some(ba => ba.name === acc.name) ?? true) : (selectedAccessories[i] ?? true)}
+                          onChange={(e) => {
+                            if (isCheckedOut) return;
+                            const newSelected = [...selectedAccessories];
+                            newSelected[i] = e.target.checked;
+                            setSelectedAccessories(newSelected);
+                          }}
+                          disabled={isCheckedOut}
+                        />
+                        <span className={!selectedAccessories[i] && !isCheckedOut ? "line-through text-gray-500" : ""}>
+                          {acc.name} {acc.is_linked_asset && acc.linked_asset_code ? `(QR: ${acc.linked_asset_code})` : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-400 mt-1 italic">El activo no tiene accesorios registrados.</p>
+                )}
               </div>
 
               <div>

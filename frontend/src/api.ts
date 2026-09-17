@@ -59,6 +59,12 @@ export const INVENTORY_TYPE_LABELS: Record<InventoryType, string> = {
   muebles: 'Inv. Muebles',
 };
 
+export interface AccessoryItem {
+  name: string;
+  is_linked_asset?: boolean;
+  linked_asset_code?: string | null;
+}
+
 export interface Asset {
   id: number;
   unique_code: string;
@@ -71,9 +77,7 @@ export interface Asset {
   area: string | null;
   responsible_name: string | null;
   value: number | null;
-  accessory_1: string | null;
-  accessory_2: string | null;
-  accessory_3: string | null;
+  accessories: AccessoryItem[];
   observations: string | null;
   appsheet_photo_ref: string | null;
   inventory_type: InventoryType;
@@ -129,6 +133,7 @@ export interface Loan {
   observations: string | null;
   condition_status: string | null;
   security_authorization: string | null;
+  borrowed_accessories?: AccessoryItem[] | null;
   asset: Asset;
   borrower: User;
   approver: User | null;
@@ -191,6 +196,12 @@ export const login = (email: string, password: string) =>
   request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 
 export const getMe = () => request<User>('/auth/me');
+
+export const changePassword = (payload: { current_password: string; new_password: string }) =>
+  request<{ message: string }>('/auth/change-password', { method: 'POST', body: JSON.stringify(payload) });
+
+export const logoutApi = () =>
+  request<{ message: string }>('/auth/logout', { method: 'POST' }).catch(() => null);
 
 export const getAssets = (module?: Module) =>
   request<Asset[]>(`/assets/${module ? `?module=${module}` : ''}`);
@@ -346,6 +357,9 @@ export const createWarehouse = (payload: { key: string; name: string }) =>
 export const updateWarehouse = (id: number, payload: Partial<{ name: string; is_active: boolean }>) =>
   request<Warehouse>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 
+export const resetUserPassword = (userId: number) =>
+  request<{ message: string; new_password: string }>(`/users/${userId}/reset-password`, { method: 'POST' });
+
 export const approveLoan = (loanId: number, approve: boolean, requiresExitPass?: boolean) =>
   request<Loan>(`/loans/${loanId}/approve`, {
     method: 'POST',
@@ -364,10 +378,10 @@ export const directLoan = (assetId: number, borrowerId: number, reason: string, 
     body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason, requires_exit_pass: requiresExitPass }),
   });
 
-export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string) =>
+export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string, borrowedAccessories?: AccessoryItem[]) =>
   request<Loan>(`/loans/${loanId}/checkout-security`, {
     method: 'POST',
-    body: JSON.stringify({ security_signature_base64: securitySignatureBase64 }),
+    body: JSON.stringify({ security_signature_base64: securitySignatureBase64, borrowed_accessories: borrowedAccessories }),
   });
 
 export const returnLoan = (loanId: number, details?: { observations?: string; condition_status?: string }) =>

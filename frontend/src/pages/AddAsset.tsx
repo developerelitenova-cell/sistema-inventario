@@ -18,9 +18,8 @@ const AddAsset = () => {
     responsible_name: '',
     purchase_price: '',
     purchase_date: '',
-    accessory_1: '',
-    accessory_2: '',
-    accessory_3: '',
+    purchase_date: '',
+    accessories: [] as import('../api').AccessoryItem[],
     observations: '',
     inventory_type: 'activos' as InventoryType,
   });
@@ -41,7 +40,25 @@ const AddAsset = () => {
   const [error, setError] = useState<string | null>(null);
   const [createdAsset, setCreatedAsset] = useState<Asset | null>(null);
 
-  const update = (field: keyof typeof form, value: string) => setForm({ ...form, [field]: value });
+  const update = (field: keyof typeof form, value: any) => setForm({ ...form, [field]: value });
+
+  const addAccessory = () => setForm(f => ({ ...f, accessories: [...f.accessories, { name: '' }] }));
+  const updateAccessoryName = (index: number, val: string) => {
+    const acc = [...form.accessories];
+    acc[index].name = val;
+    setForm(f => ({ ...f, accessories: acc }));
+  };
+  const updateAccessoryLinked = (index: number, code: string) => {
+    const acc = [...form.accessories];
+    acc[index].is_linked_asset = !!code;
+    acc[index].linked_asset_code = code || null;
+    setForm(f => ({ ...f, accessories: acc }));
+  };
+  const removeAccessory = (index: number) => {
+    const acc = [...form.accessories];
+    acc.splice(index, 1);
+    setForm(f => ({ ...f, accessories: acc }));
+  };
   
   const handleEstimateWithAI = async () => {
     if (!photo) return;
@@ -78,9 +95,7 @@ const AddAsset = () => {
         responsible_name: form.responsible_name || undefined,
         purchase_price: form.purchase_price ? Number(form.purchase_price) : undefined,
         purchase_date: form.purchase_date ? new Date(form.purchase_date).toISOString() : undefined,
-        accessory_1: form.accessory_1 || undefined,
-        accessory_2: form.accessory_2 || undefined,
-        accessory_3: form.accessory_3 || undefined,
+        accessories: form.accessories,
         observations: form.observations || undefined,
         inventory_type: form.inventory_type,
         photo_url: photo || undefined,
@@ -275,19 +290,36 @@ const AddAsset = () => {
           El precio y la fecha son opcionales, pero sin ellos el sistema no puede calcular la depreciación del activo. La categoría se detecta automáticamente a partir de la descripción.
         </p>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <label style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Accesorio 1</div>
-            <input className="input-field" value={form.accessory_1} onChange={(e) => update('accessory_1', e.target.value)} />
-          </label>
-          <label style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Accesorio 2</div>
-            <input className="input-field" value={form.accessory_2} onChange={(e) => update('accessory_2', e.target.value)} />
-          </label>
-          <label style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Accesorio 3</div>
-            <input className="input-field" value={form.accessory_3} onChange={(e) => update('accessory_3', e.target.value)} />
-          </label>
+        <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px', border: '1px solid var(--surface-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Accesorios</div>
+            <button type="button" className="btn btn-outline" style={{ padding: '4px 12px', fontSize: '0.8rem' }} onClick={addAccessory}>
+              + Añadir Accesorio
+            </button>
+          </div>
+          {form.accessories.map((acc, i) => (
+            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input 
+                className="input-field" 
+                placeholder="Nombre (ej. Teclado)" 
+                value={acc.name} 
+                onChange={e => updateAccessoryName(i, e.target.value)} 
+                style={{ flex: 2 }}
+              />
+              <input 
+                className="input-field" 
+                placeholder="Código Activo (opcional)" 
+                value={acc.linked_asset_code || ''} 
+                onChange={e => updateAccessoryLinked(i, e.target.value)} 
+                style={{ flex: 1 }}
+                title="Si este accesorio es otro activo registrado, ingresa su código aquí."
+              />
+              <button type="button" className="btn btn-outline" style={{ padding: '8px', color: 'var(--danger-color)' }} onClick={() => removeAccessory(i)} title="Quitar accesorio">
+                ✕
+              </button>
+            </div>
+          ))}
+          {form.accessories.length === 0 && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>Sin accesorios agregados.</p>}
         </div>
 
         <label>

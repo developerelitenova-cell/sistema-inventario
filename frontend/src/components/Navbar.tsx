@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
-import { getAssetRequests, isMasterAdmin } from '../api';
+import { getAssetRequests, getAssets, isMasterAdmin, logoutApi } from '../api';
 import { useModule } from '../moduleContext';
 import logoIcon from '../assets/logo_elite_nova.png';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const Navbar = () => {
   const location = useLocation();
   const currentUser = getCachedUser();
   const { module } = useModule();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const handleLogout = () => {
-    clearToken();
-    window.location.href = '/dashboard';
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } finally {
+      clearToken();
+      window.location.href = '/dashboard';
+    }
   };
 
   const isEmpleado = currentUser?.role === 'empleado';
@@ -115,13 +121,22 @@ const Navbar = () => {
         </div>
 
         {currentUser && (
-          <button
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            className="md:hidden flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              title="Cambiar Contraseña"
+              className="p-2 text-gray-600 hover:bg-black/5 rounded-xl border border-gray-200"
+            >
+              <KeyRound size={16} />
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         )}
       </div>
 
@@ -202,15 +217,28 @@ const Navbar = () => {
         })}
       </div>
 
-      {/* Logout button for desktop */}
+      {/* User action buttons for desktop */}
       {currentUser && (
-        <button
-          onClick={handleLogout}
-          title="Cerrar sesión"
-          className="hidden md:flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ml-4 whitespace-nowrap"
-        >
-          {currentUser.full_name} <LogOut size={16} />
-        </button>
+        <div className="hidden md:flex items-center gap-2 ml-4">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            title="Cambiar contraseña"
+            className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap"
+          >
+            <KeyRound size={14} /> Clave
+          </button>
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
+          >
+            {currentUser.full_name} <LogOut size={16} />
+          </button>
+        </div>
+      )}
+
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
     </nav>
   );

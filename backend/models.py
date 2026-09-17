@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum, Boolean, Table
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum, Boolean, Table, JSON
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -117,9 +117,7 @@ class Asset(Base):
     area = Column(String, nullable=True)
     responsible_name = Column(String, nullable=True)
     value = Column(Float, nullable=True)
-    accessory_1 = Column(String, nullable=True)
-    accessory_2 = Column(String, nullable=True)
-    accessory_3 = Column(String, nullable=True)
+    accessories = Column(JSON, default=list)
     observations = Column(Text, nullable=True)
     appsheet_photo_ref = Column(String, nullable=True)
 
@@ -144,6 +142,7 @@ class Loan(Base):
     
     reason = Column(Text, nullable=True)
     status = Column(Enum(LoanStatusEnum), default=LoanStatusEnum.PENDING)
+    borrowed_accessories = Column(JSON, default=list)
 
     request_date = Column(DateTime, default=datetime.utcnow)
     approval_date = Column(DateTime, nullable=True)

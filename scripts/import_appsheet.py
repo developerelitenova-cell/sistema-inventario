@@ -166,8 +166,27 @@ def import_loans(db, rows: list) -> dict:
 
         asset = db.query(models.Asset).filter(models.Asset.unique_code == code).first()
         if not asset:
-            skipped_no_asset += 1
-            continue
+            # Construir la lista de accesorios en base a las columnas originales (si se tienen los datos, ej de row u otra lógica).
+            # Asumiendo que row tiene accessory_1, accessory_2, accessory_3:
+            accessories = []
+            for col in ['accessory_1', 'accessory_2', 'accessory_3', 'Accesorio 1', 'Accesorio 2', 'Accesorio 3']:
+                if col in row and row[col]:
+                    val = str(row[col]).strip()
+                    if val.lower() not in ['nan', 'none', '']:
+                        accessories.append({
+                            "name": val,
+                            "is_linked_asset": False,
+                            "linked_asset_code": None
+                        })
+            asset = models.Asset(
+                unique_code=code,
+                qr_data=generate_qr_base64(code),
+                description=row.get("Descripción") or "Sin descripción",
+                accessories=accessories,
+                status=models.AssetStatusEnum.AVAILABLE
+            )
+            db.add(asset)
+            db.flush()
 
         loan = None
         if external_id:

@@ -1,4 +1,5 @@
 import secrets
+import hashlib
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -29,9 +30,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_token(db: Session, user: "models.User") -> str:
     token = secrets.token_urlsafe(32)
+    hashed_token = hashlib.sha256(token.encode()).hexdigest()
     auth_token = models.AuthToken(
         user_id=user.id,
-        token=token,
+        token=hashed_token,
         expires_at=datetime.utcnow() + timedelta(days=TOKEN_TTL_DAYS),
     )
     db.add(auth_token)
@@ -47,7 +49,8 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="No autenticado")
 
     token = authorization.removeprefix("Bearer ").strip()
-    auth_token = db.query(models.AuthToken).filter(models.AuthToken.token == token).first()
+    hashed_token = hashlib.sha256(token.encode()).hexdigest()
+    auth_token = db.query(models.AuthToken).filter(models.AuthToken.token == hashed_token).first()
     if not auth_token or auth_token.expires_at < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
 

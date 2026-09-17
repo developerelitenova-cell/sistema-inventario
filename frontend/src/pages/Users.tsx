@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Pencil, UserPlus, Trash2 } from 'lucide-react';
-import { getUsers, deleteUser, ROLE_LABELS, type User } from '../api';
+import { Pencil, UserPlus, Trash2, Key } from 'lucide-react';
+import { getUsers, deleteUser, resetUserPassword, ROLE_LABELS, type User } from '../api';
 import UserEditModal from '../components/UserEditModal';
 import UserCreateModal from '../components/UserCreateModal';
 import UserProfileCard from '../components/UserProfileCard';
@@ -24,6 +24,16 @@ const Users = () => {
       .then(() => setUsers((prev) => prev.filter((x) => x.id !== u.id)))
       .catch((err) => window.alert(err.message))
       .finally(() => setDeletingId(null));
+  };
+
+  const handleResetPassword = (u: User) => {
+    if (!window.confirm(`¿Estás seguro de generar una nueva contraseña para ${u.full_name}?`)) return;
+    
+    resetUserPassword(u.id)
+      .then((res) => {
+        window.alert(`¡Contraseña regenerada con éxito!\n\nNueva contraseña para ${u.full_name}:\n\n${res.new_password}\n\nPor favor, copia esta contraseña de forma segura. No se volverá a mostrar.`);
+      })
+      .catch((err) => window.alert(err.message));
   };
 
   return (
@@ -53,7 +63,15 @@ const Users = () => {
                 subtitle={`${ROLE_LABELS[u.role]} · ${u.warehouses.length ? u.warehouses.map(w => w.name).join(', ') : 'todas las bodegas'} · ${u.cargo || 'sin cargo'}`}
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setEditingUser(u)}>
+                <button 
+                  className="btn btn-outline" 
+                  style={{ padding: '8px' }} 
+                  onClick={() => handleResetPassword(u)}
+                  title="Generar nueva contraseña"
+                >
+                  <Key size={14} />
+                </button>
+                <button className="btn btn-outline" style={{ padding: '8px' }} onClick={() => setEditingUser(u)} title="Editar usuario">
                   <Pencil size={14} />
                 </button>
                 <button

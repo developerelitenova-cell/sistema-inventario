@@ -82,7 +82,7 @@ const LoginGate = ({ children }: LoginGateProps) => {
         <input
           type="password"
           className="input-field"
-          placeholder="Contraseña (tu número de cédula)"
+          placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ marginBottom: '16px' }}

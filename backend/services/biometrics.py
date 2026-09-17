@@ -23,5 +23,5 @@ def validate_face_and_id(face_image_bytes: bytes, id_image_bytes: bytes) -> bool
     # TODO: Implementar OCR para extraer cédula (pytesseract o Cloud API)
     # TODO: Implementar Face Verification (deepface o Cloud API)
     
-    logger.info("Validación biométrica exitosa (Simulada).")
-    return True
+    logger.info("La validación biométrica automatizada está deshabilitada por seguridad en este prototipo.")
+    return False
