@@ -233,7 +233,7 @@ class AssetRequest(Base):
     requester = relationship("User", foreign_keys=[requester_id])
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
     resulting_loan = relationship("Loan")
-    comments = relationship("RequestComment", backref="asset_request", order_by="RequestComment.created_at")
+    comments = relationship("RequestComment", back_populates="asset_request", order_by="RequestComment.created_at")
 
 
 class RequestComment(Base):
@@ -247,7 +247,7 @@ class RequestComment(Base):
     message = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    asset_request = relationship("AssetRequest")
+    asset_request = relationship("AssetRequest", back_populates="comments")
     author = relationship("User")
 
 
