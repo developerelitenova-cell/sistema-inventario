@@ -65,7 +65,7 @@ export default function SecurityExitPass() {
   const stopDrawing = () => setIsDrawing(false);
 
   const handleConfirmExit = async () => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !loan) return;
     const signatureBase64 = canvasRef.current.toDataURL("image/png");
     
     const finalAccessories = (loan.asset.accessories || []).filter((_, i) => selectedAccessories[i]);

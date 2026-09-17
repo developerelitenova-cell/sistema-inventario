@@ -100,10 +100,10 @@ const Approvals = () => {
                     <strong>Motivo:</strong> "{loan.reason}"
                   </div>
                 )}
-                {[loan.asset.accessory_1, loan.asset.accessory_2, loan.asset.accessory_3].filter(Boolean).length > 0 && (
+                {(loan.asset.accessories || []).length > 0 && (
                   <div style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Package size={14} />
-                    Incluye: {[loan.asset.accessory_1, loan.asset.accessory_2, loan.asset.accessory_3].filter(Boolean).join(', ')}
+                    Incluye: {(loan.asset.accessories || []).map(a => a.name).filter(Boolean).join(', ')}
                   </div>
                 )}
               </div>

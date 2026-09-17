@@ -18,7 +18,6 @@ const AddAsset = () => {
     responsible_name: '',
     purchase_price: '',
     purchase_date: '',
-    purchase_date: '',
     accessories: [] as import('../api').AccessoryItem[],
     observations: '',
     inventory_type: 'activos' as InventoryType,

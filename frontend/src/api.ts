@@ -223,9 +223,7 @@ export interface AssetCreateInput {
   module: Module;
   area?: string;
   responsible_name?: string;
-  accessory_1?: string;
-  accessory_2?: string;
-  accessory_3?: string;
+  accessories?: AccessoryItem[];
   observations?: string;
   inventory_type?: InventoryType;
   category?: Category;
@@ -272,9 +270,7 @@ export type AssetUpdate = Partial<{
   area: string;
   responsible_name: string;
   value: number;
-  accessory_1: string;
-  accessory_2: string;
-  accessory_3: string;
+  accessories: AccessoryItem[];
   observations: string;
   inventory_type: InventoryType;
   category: Category;

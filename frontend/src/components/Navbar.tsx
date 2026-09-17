@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
-import { getAssetRequests, getAssets, isMasterAdmin, logoutApi } from '../api';
+import { getAssetRequests, isMasterAdmin, logoutApi } from '../api';
 import { useModule } from '../moduleContext';
 import logoIcon from '../assets/logo_elite_nova.png';
 import ChangePasswordModal from './ChangePasswordModal';
