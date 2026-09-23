@@ -1,7 +1,7 @@
 import { getPassword } from './auth';
 import { getToken } from './session';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-inventario-kxdc.onrender.com';
+const API_URL = 'https://sistema-inventario-kxdc.onrender.com';
 
 export type AssetStatus = 'available' | 'loaned' | 'maintenance' | 'assigned' | 'pending_registration';
 
