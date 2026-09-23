@@ -1,22 +1,15 @@
-import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), 'backend'))
-from database import engine
-from sqlalchemy import text
+import os
 
-def add_borrowed_accessories_column():
-    with engine.begin() as conn:
-        try:
-            # Check if column exists first
-            res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='loans' AND column_name='borrowed_accessories'"))
-            if not res.fetchone():
-                print("Adding borrowed_accessories to loans...")
-                conn.execute(text("ALTER TABLE loans ADD COLUMN borrowed_accessories JSONB DEFAULT '[]'::jsonb;"))
-                print("Column added successfully.")
-            else:
-                print("Column borrowed_accessories already exists.")
-        except Exception as e:
-            print(f"Error adding column: {e}")
+from sqlalchemy import text
+from database import engine
+
+def fix_nulls():
+    with engine.connect() as conn:
+        conn.execute(text("UPDATE assets SET inventory_type = 'ACTIVOS' WHERE inventory_type IS NULL;"))
+        conn.execute(text("UPDATE assets SET value_source = 'DESCONOCIDO' WHERE value_source IS NULL;"))
+        conn.commit()
+        print("Database updated successfully.")
 
 if __name__ == "__main__":
-    add_borrowed_accessories_column()
+    fix_nulls()
