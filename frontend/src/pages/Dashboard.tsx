@@ -3,9 +3,9 @@ import { Search, Pencil, Send, Info, CornerDownLeft } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
-  getLoans, getAssignments, getActivityLogs, returnAsset,
+  getLoans, getAssignments, returnAsset,
   type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType,
-  type Loan, type Assignment, type ActivityLog
+  type Loan, type Assignment
 } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
@@ -29,10 +29,9 @@ const EmployeeRequestView = () => {
   const [availability, setAvailability] = useState<AssetAvailability | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'request' | 'assets' | 'history'>('request');
+  const [activeTab, setActiveTab] = useState<'request' | 'assets'>('request');
   const [loans, setLoans] = useState<Loan[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const currentUser = getCachedUser();
 
   const load = () => {
@@ -40,8 +39,7 @@ const EmployeeRequestView = () => {
     Promise.all([
       getMyAssetRequests().then(setMyRequests),
       getLoans().then(setLoans),
-      getAssignments().then(setAssignments),
-      getActivityLogs({ actor_id: currentUser?.id }).then(setActivityLogs)
+      getAssignments().then(setAssignments)
     ])
     .catch((err) => setError(err.message))
     .finally(() => setLoading(false));
@@ -212,7 +210,6 @@ const EmployeeRequestView = () => {
         </div>
       )}
 
-      )}
     </div>
   );
 };
