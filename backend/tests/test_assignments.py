@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 import pytest
 from fastapi.testclient import TestClient
 from models import User, Asset, AssetAssignment as Assignment, AssetStatusEnum, RoleEnum, AssignmentStatusEnum
@@ -34,7 +35,7 @@ def test_get_assignments(client: TestClient, admin_token, db_session, test_user,
         asset_id=db_asset.id,
         user_id=test_user.id,
         status=AssignmentStatusEnum.ACTIVE,
-        expiration_date=datetime.utcnow()
+        expiration_date=get_colombia_time()
     )
     db_session.add(assignment)
     db_session.commit()
@@ -66,7 +67,7 @@ def test_revoke_assignment(client: TestClient, admin_token, db_session, test_use
         asset_id=db_asset.id,
         user_id=test_user.id,
         status=AssignmentStatusEnum.ACTIVE,
-        expiration_date=datetime.utcnow()
+        expiration_date=get_colombia_time()
     )
     db_session.add(assignment)
     db_session.commit()
@@ -90,7 +91,7 @@ def test_get_assignments_invalid_status(client: TestClient, admin_token):
 
 def test_get_assignments_normal_user(client: TestClient, normal_user_token, db_session, test_user, db_asset):
     # Ensure normal user only gets their own
-    assignment = Assignment(asset_id=db_asset.id, user_id=test_user.id, status=AssignmentStatusEnum.ACTIVE, expiration_date=datetime.utcnow())
+    assignment = Assignment(asset_id=db_asset.id, user_id=test_user.id, status=AssignmentStatusEnum.ACTIVE, expiration_date=get_colombia_time())
     db_session.add(assignment)
     db_session.commit()
     response = client.get("/assignments/", headers={"Authorization": f"Bearer {normal_user_token}"})
@@ -111,7 +112,7 @@ def test_renew_assignment(client: TestClient, admin_token, db_session, test_user
         asset_id=db_asset.id,
         user_id=test_user.id,
         status=AssignmentStatusEnum.ACTIVE,
-        expiration_date=datetime.utcnow()
+        expiration_date=get_colombia_time()
     )
     db_session.add(assignment)
     db_session.commit()
@@ -128,7 +129,7 @@ def test_renew_invalid_assignment(client: TestClient, admin_token, db_session, t
         asset_id=db_asset.id,
         user_id=test_user.id,
         status=AssignmentStatusEnum.REVOKED,
-        expiration_date=datetime.utcnow()
+        expiration_date=get_colombia_time()
     )
     db_session.add(assignment)
     db_session.commit()
@@ -141,7 +142,7 @@ def test_revoke_invalid_assignment(client: TestClient, admin_token, db_session, 
         asset_id=db_asset.id,
         user_id=test_user.id,
         status=AssignmentStatusEnum.REVOKED,
-        expiration_date=datetime.utcnow()
+        expiration_date=get_colombia_time()
     )
     db_session.add(assignment)
     db_session.commit()

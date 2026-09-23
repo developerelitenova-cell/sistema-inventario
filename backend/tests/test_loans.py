@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 import pytest
 from fastapi.testclient import TestClient
 from models import User, Asset, Loan, LoanStatusEnum, AssetStatusEnum
@@ -51,7 +52,7 @@ def test_approve_loan_admin(client: TestClient, db_session, admin_token, test_us
         borrower_id=test_user.id,
         status=LoanStatusEnum.PENDING,
         reason="Para revisión",
-        return_date=datetime.utcnow() + timedelta(days=7)
+        return_date=get_colombia_time() + timedelta(days=7)
     )
     db_session.add(loan)
     db_session.commit()
@@ -104,7 +105,7 @@ def test_return_asset_directly(client: TestClient, admin_token, db_session, test
 
 def test_return_asset_no_loan_but_assignment(client: TestClient, admin_token, db_session, test_user, db_asset):
     from models import AssetAssignment, AssignmentStatusEnum
-    assignment = AssetAssignment(asset_id=db_asset.id, user_id=test_user.id, status=AssignmentStatusEnum.ACTIVE, expiration_date=datetime.utcnow())
+    assignment = AssetAssignment(asset_id=db_asset.id, user_id=test_user.id, status=AssignmentStatusEnum.ACTIVE, expiration_date=get_colombia_time())
     db_session.add(assignment)
     db_session.commit()
     
@@ -132,7 +133,7 @@ def test_approve_loan_normal_user_fails(client: TestClient, db_session, normal_u
         borrower_id=test_user.id,
         status=LoanStatusEnum.PENDING,
         reason="Para revisión",
-        return_date=datetime.utcnow() + timedelta(days=7)
+        return_date=get_colombia_time() + timedelta(days=7)
     )
     db_session.add(loan)
     db_session.commit()

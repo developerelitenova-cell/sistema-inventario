@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 import secrets
 import hashlib
 from datetime import datetime, timedelta
@@ -35,7 +36,7 @@ def create_token(db: Session, user: "models.User") -> str:
     auth_token = models.AuthToken(
         user_id=user.id,
         token=hashed_token,
-        expires_at=datetime.utcnow() + timedelta(days=TOKEN_TTL_DAYS),
+        expires_at=get_colombia_time() + timedelta(days=TOKEN_TTL_DAYS),
     )
     db.add(auth_token)
     db.commit()
@@ -52,7 +53,7 @@ def get_current_user(
     token = authorization.removeprefix("Bearer ").strip()
     hashed_token = hashlib.sha256(token.encode()).hexdigest()
     auth_token = db.query(models.AuthToken).filter(models.AuthToken.token == hashed_token).first()
-    if not auth_token or auth_token.expires_at < datetime.utcnow():
+    if not auth_token or auth_token.expires_at < get_colombia_time():
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
 
     return auth_token.user

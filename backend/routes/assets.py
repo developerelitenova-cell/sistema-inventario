@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 import base64
 import re
 from datetime import datetime, timedelta
@@ -214,7 +215,7 @@ def get_unused_assets(
     if module and not auth_service.can_access_warehouse(current_user, module):
         raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
 
-    threshold = datetime.utcnow() - timedelta(days=UNUSED_THRESHOLD_DAYS)
+    threshold = get_colombia_time() - timedelta(days=UNUSED_THRESHOLD_DAYS)
     query = db.query(models.Asset).filter(models.Asset.status == models.AssetStatusEnum.AVAILABLE)
     if module:
         query = query.filter(models.Asset.module == module)
@@ -239,7 +240,7 @@ def get_unused_assets(
         if not is_unused:
             continue
 
-        days_since = (datetime.utcnow() - last_activity).days if last_activity else None
+        days_since = (get_colombia_time() - last_activity).days if last_activity else None
         results.append({
             "id": asset.id,
             "unique_code": asset.unique_code,

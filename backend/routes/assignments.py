@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -56,7 +57,7 @@ def create_assignment(
         asset_id=payload.asset_id,
         user_id=payload.user_id,
         authorized_by_id=current_user.id,
-        expiration_date=datetime.utcnow() + timedelta(days=payload.duration_days),
+        expiration_date=get_colombia_time() + timedelta(days=payload.duration_days),
         notes=payload.notes,
         status=models.AssignmentStatusEnum.ACTIVE,
     )
@@ -84,7 +85,7 @@ def renew_assignment(
     if not auth_service.can_access_warehouse(current_user, assignment.asset.module):
         raise HTTPException(status_code=403, detail="No podés renovar asignaciones de esta bodega")
 
-    assignment.expiration_date = datetime.utcnow() + timedelta(days=duration_days)
+    assignment.expiration_date = get_colombia_time() + timedelta(days=duration_days)
     audit.log_action(db, current_user, "assignment.renewed", f"Se renovó la asignación #{assignment.id} ({assignment.asset.unique_code} — {assignment.user.full_name})", entity_type="assignment", entity_id=assignment.id)
     db.commit()
     db.refresh(assignment)

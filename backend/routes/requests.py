@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 from datetime import datetime
 from typing import List, Optional
 
@@ -100,7 +101,7 @@ def assign_asset_request(
         approver_id=current_user.id,
         reason=asset_request.description,
         status=models.LoanStatusEnum.APPROVED,
-        approval_date=datetime.utcnow(),
+        approval_date=get_colombia_time(),
         security_authorization="AUTORIZADO_SALIDA" if payload.requires_exit_pass else "USO_INTERNO"
     )
     db.add(new_loan)
@@ -108,7 +109,7 @@ def assign_asset_request(
 
     asset_request.status = models.RequestStatusEnum.ASSIGNED
     asset_request.reviewed_by_id = current_user.id
-    asset_request.reviewed_at = datetime.utcnow()
+    asset_request.reviewed_at = get_colombia_time()
     asset_request.review_notes = payload.notes
     asset_request.resulting_loan_id = new_loan.id
 
@@ -139,7 +140,7 @@ def reject_asset_request(
 
     asset_request.status = models.RequestStatusEnum.REJECTED
     asset_request.reviewed_by_id = current_user.id
-    asset_request.reviewed_at = datetime.utcnow()
+    asset_request.reviewed_at = get_colombia_time()
     asset_request.review_notes = payload.notes
 
     audit.log_action(

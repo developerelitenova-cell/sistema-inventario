@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum, Boolean, Table, JSON
 from sqlalchemy.orm import relationship
 import enum
@@ -76,7 +77,7 @@ class Warehouse(Base):
     key = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_colombia_time)
 
 
 class User(Base):
@@ -144,7 +145,7 @@ class Loan(Base):
     status = Column(Enum(LoanStatusEnum), default=LoanStatusEnum.PENDING)
     borrowed_accessories = Column(JSON, default=list)
 
-    request_date = Column(DateTime, default=datetime.utcnow)
+    request_date = Column(DateTime, default=get_colombia_time)
     approval_date = Column(DateTime, nullable=True)
     checkout_date = Column(DateTime, nullable=True)
     return_date = Column(DateTime, nullable=True)
@@ -174,7 +175,7 @@ class AssetAssignment(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     authorized_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    start_date = Column(DateTime, default=datetime.utcnow)
+    start_date = Column(DateTime, default=get_colombia_time)
     expiration_date = Column(DateTime, nullable=False)
     status = Column(Enum(AssignmentStatusEnum), default=AssignmentStatusEnum.ACTIVE)
     notes = Column(Text, nullable=True)
@@ -203,7 +204,7 @@ class AuthToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     token = Column(String, unique=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_colombia_time)
     expires_at = Column(DateTime, nullable=False)
 
     user = relationship("User")
@@ -226,7 +227,7 @@ class AssetRequest(Base):
     reviewed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     resulting_loan_id = Column(Integer, ForeignKey("loans.id"), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_colombia_time)
     reviewed_at = Column(DateTime, nullable=True)
     review_notes = Column(Text, nullable=True)
 
@@ -245,7 +246,7 @@ class RequestComment(Base):
     asset_request_id = Column(Integer, ForeignKey("asset_requests.id"))
     author_id = Column(Integer, ForeignKey("users.id"))
     message = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_colombia_time)
 
     asset_request = relationship("AssetRequest", back_populates="comments")
     author = relationship("User")
@@ -262,6 +263,6 @@ class ActivityLog(Base):
     description = Column(Text)
     entity_type = Column(String, nullable=True, index=True)
     entity_id = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=get_colombia_time, index=True)
 
     actor = relationship("User")

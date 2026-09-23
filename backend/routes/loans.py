@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 from datetime import datetime
 from typing import List, Optional
 
@@ -108,7 +109,7 @@ def create_direct_loan(
         reason=loan_req.reason,
         status=models.LoanStatusEnum.APPROVED,
         approver_id=current_user.id,
-        approval_date=datetime.utcnow(),
+        approval_date=get_colombia_time(),
         security_authorization="AUTORIZADO_SALIDA" if loan_req.requires_exit_pass else "USO_INTERNO",
     )
     db.add(new_loan)
@@ -137,7 +138,7 @@ def approve_loan(
         raise HTTPException(status_code=403, detail="No tenés permiso para aprobar préstamos de esta bodega")
 
     loan.approver_id = current_user.id
-    loan.approval_date = datetime.utcnow()
+    loan.approval_date = get_colombia_time()
     loan.status = models.LoanStatusEnum.APPROVED if approval.approved else models.LoanStatusEnum.REJECTED
 
     if approval.approved:
@@ -176,7 +177,7 @@ async def checkout_loan(
         
     # Actualizar préstamo y activo
     loan.status = models.LoanStatusEnum.CHECKED_OUT
-    loan.checkout_date = datetime.utcnow()
+    loan.checkout_date = get_colombia_time()
     loan.asset.status = models.AssetStatusEnum.LOANED
     loan.borrowed_accessories = loan.asset.accessories
 
@@ -205,7 +206,7 @@ def checkout_loan_security(
         loan.security_signature_url = sig_url
 
     loan.status = models.LoanStatusEnum.CHECKED_OUT
-    loan.checkout_date = datetime.utcnow()
+    loan.checkout_date = get_colombia_time()
     loan.asset.status = models.AssetStatusEnum.LOANED
 
     if request.borrowed_accessories is not None:
@@ -235,7 +236,7 @@ def return_loan(
         raise HTTPException(status_code=403, detail="No tiene permisos para devolver activos de este módulo")
 
     loan.status = models.LoanStatusEnum.RETURNED
-    loan.return_date = datetime.utcnow()
+    loan.return_date = get_colombia_time()
     
     if payload.condition_status and payload.condition_status.upper() in ["DAÑADO", "INCOMPLETO", "PERDIDO"]:
         loan.asset.status = models.AssetStatusEnum.MAINTENANCE

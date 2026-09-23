@@ -1,3 +1,4 @@
+from time_util import get_colombia_time
 """
 Calculadora de depreciación en línea recta.
 
@@ -39,7 +40,7 @@ def calculate_depreciation(asset: "models.Asset") -> dict:
         }
 
     useful_life = USEFUL_LIFE_YEARS.get(asset.category, _DEFAULT_USEFUL_LIFE)
-    days_elapsed = (datetime.utcnow() - asset.purchase_date).days
+    days_elapsed = (get_colombia_time() - asset.purchase_date).days
     total_days = useful_life * 365
     fraction = min(max(days_elapsed / total_days, 0), 1) if total_days > 0 else 1
     book_value = asset.purchase_price * (1 - fraction)
