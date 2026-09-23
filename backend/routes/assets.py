@@ -115,8 +115,8 @@ def batch_generate_assets(
         qr_base64 = qr_generator.generate_qr_base64(code)
         new_asset = models.Asset(
             unique_code=code,
-            description=None,
-            brand_model=None,
+            description="Pendiente de registro",
+            brand_model="Pendiente",
             status=models.AssetStatusEnum.PENDING_REGISTRATION,
             qr_data=qr_base64,
             module=payload.module,
