@@ -31,6 +31,7 @@ const RegisterByCode = () => {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         rememberLastUsedCamera: true,
+        videoConstraints: { facingMode: "environment" }
       },
       false
     );
@@ -123,6 +124,7 @@ const RegisterByCode = () => {
         }
         #register-reader a { color: var(--accent-color); }
         #register-reader select {
+          display: none !important;
           background: rgba(15,23,42,0.5);
           color: white;
           border: 1px solid var(--surface-border);
