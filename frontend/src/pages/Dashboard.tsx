@@ -104,12 +104,6 @@ const EmployeeRequestView = () => {
         >
           Mis Activos a Cargo
         </button>
-        <button
-          className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setActiveTab('history')}
-        >
-          Mi Historial
-        </button>
       </div>
 
       {activeTab === 'request' && (
@@ -218,28 +212,6 @@ const EmployeeRequestView = () => {
         </div>
       )}
 
-      {activeTab === 'history' && (
-        <div className="animate-fade-in">
-          {loading ? (
-            <p style={{ color: 'var(--text-secondary)' }}>Cargando historial...</p>
-          ) : activityLogs.length === 0 ? (
-            <p style={{ color: 'var(--text-secondary)' }}>No hay actividad registrada.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {activityLogs.map(log => (
-                <div key={log.id} className="glass-panel" style={{ padding: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--accent-color)' }}>{log.action}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {new Date(log.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div style={{ color: 'var(--text-primary)' }}>{log.description}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       )}
     </div>
   );
