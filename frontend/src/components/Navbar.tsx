@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import { getAssetRequests, isMasterAdmin, logoutApi } from '../api';
@@ -33,6 +33,29 @@ const Navbar = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 2);
+      // Small buffer for rounding issues
+      setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 100);
+    return () => clearTimeout(timer);
+  }, [currentUser?.role, module, location.pathname]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
@@ -172,15 +195,31 @@ const Navbar = () => {
       )}
 
       {/* Navigation Links - horizontally scrollable on mobile & desktop */}
-      <div 
-        ref={scrollContainerRef}
-        onMouseDown={handleMouseDown}
-        onMouseLeave={handleMouseLeave}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        className={`flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-1 min-w-0 items-center px-1 hide-scrollbar ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
+      <div className="relative flex-1 min-w-0 flex items-center overflow-hidden rounded-xl">
+        {/* Left fade indicator */}
+        <div 
+          className={`absolute left-0 top-0 bottom-0 w-8 md:w-12 pointer-events-none z-10 flex items-center justify-start transition-opacity duration-300 bg-gradient-to-r from-[rgba(255,255,255,0.95)] to-transparent ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
+        >
+          <ChevronLeft className="w-4 h-4 text-slate-500 ml-0.5" />
+        </div>
+
+        {/* Right fade indicator */}
+        <div 
+          className={`absolute right-0 top-0 bottom-0 w-8 md:w-12 pointer-events-none z-10 flex items-center justify-end transition-opacity duration-300 bg-gradient-to-l from-[rgba(255,255,255,0.95)] to-transparent ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
+        >
+          <ChevronRight className="w-5 h-5 text-slate-600 mr-0.5 animate-pulse" />
+        </div>
+
+        <div 
+          ref={scrollContainerRef}
+          onScroll={checkScroll}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          className={`flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-1 min-w-0 items-center px-2 hide-scrollbar ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.path);
@@ -215,6 +254,7 @@ const Navbar = () => {
             </Link>
           );
         })}
+        </div>
       </div>
 
       {/* User action buttons for desktop */}
