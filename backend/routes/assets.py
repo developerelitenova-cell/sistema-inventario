@@ -272,7 +272,7 @@ def update_asset(
     if update.module and not auth_service.can_access_warehouse(_user, update.module):
         raise HTTPException(status_code=403, detail="No podés mover el activo a esa bodega")
 
-    for field, value in update.dict(exclude_unset=True).items():
+    for field, value in update.model_dump(exclude_unset=True).items():
         if field == "accessories":
             setattr(asset, field, [acc.dict() for acc in value] if value else [])
         else:

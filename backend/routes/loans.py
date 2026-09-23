@@ -16,6 +16,7 @@ router = APIRouter(tags=["Préstamos"])
 
 class SecurityCheckoutRequest(BaseModel):
     security_signature_base64: str
+    borrowed_accessories: Optional[List[schemas.AccessoryItem]] = None
 
 
 @router.get("/loans/", response_model=List[schemas.Loan])

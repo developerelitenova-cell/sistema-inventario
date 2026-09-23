@@ -60,7 +60,8 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower()).strip()
 
 
-def classify_asset(description: str | None, brand_model: str | None) -> CategoryEnum:
+from typing import Optional
+def classify_asset(description: Optional[str], brand_model: Optional[str]) -> CategoryEnum:
     combined = _normalize(f"{description or ''} {brand_model or ''}")
     for category, keywords in _RULES:
         if any(keyword in combined for keyword in keywords):

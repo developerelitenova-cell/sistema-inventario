@@ -16,7 +16,8 @@ ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
-def upload_base64_image(base64_string: str, bucket_name: str, folder: str, filename_prefix: str, is_private: bool = False) -> str | None:
+from typing import Optional
+def upload_base64_image(base64_string: str, bucket_name: str, folder: str, filename_prefix: str, is_private: bool = False) -> Optional[str]:
     """
     Decodifica una imagen en base64 y la sube a Supabase Storage con sanitización defensiva.
     Retorna la URL pública de la imagen o None en caso de fallo.

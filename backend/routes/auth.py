@@ -128,7 +128,7 @@ def change_password(
 
 @router.post("/logout")
 def logout(
-    authorization: str | None = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
     current_user: models.User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):

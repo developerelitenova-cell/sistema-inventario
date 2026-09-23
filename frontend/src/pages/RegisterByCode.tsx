@@ -30,10 +30,7 @@ const RegisterByCode = () => {
       {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        // Forzar la cámara trasera principal directamente: si no se pasa
-        // videoConstraints, html5-qrcode muestra un desplegable para elegir
-        // entre todas las cámaras del teléfono (frontal, gran angular, etc.).
-        videoConstraints: { facingMode: { ideal: 'environment' } },
+        rememberLastUsedCamera: true,
       },
       false
     );

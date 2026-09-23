@@ -1,6 +1,7 @@
 import secrets
 import hashlib
 from datetime import datetime, timedelta
+from typing import Optional, List
 
 import bcrypt
 from fastapi import Depends, Header, HTTPException
@@ -42,7 +43,7 @@ def create_token(db: Session, user: "models.User") -> str:
 
 
 def get_current_user(
-    authorization: str | None = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> "models.User":
     if not authorization or not authorization.startswith("Bearer "):
@@ -66,7 +67,7 @@ def require_role(*roles: "models.RoleEnum"):
     return dependency
 
 
-def visible_warehouse_keys(user: "models.User") -> list[str] | None:
+def visible_warehouse_keys(user: "models.User") -> Optional[List[str]]:
     """None = sin restricción (ve/opera sobre todas las bodegas).
     Lista = solo esas bodegas. Aplica igual para cualquier rol: un usuario
     sin bodegas asignadas queda sin restricción (así es como un admin
@@ -75,7 +76,7 @@ def visible_warehouse_keys(user: "models.User") -> list[str] | None:
     return keys or None
 
 
-def can_access_warehouse(user: "models.User", warehouse_key: str | None) -> bool:
+def can_access_warehouse(user: "models.User", warehouse_key: Optional[str]) -> bool:
     """Chequeo puntual para un asset/loan/request concreto o un query param."""
     allowed = visible_warehouse_keys(user)
     return allowed is None or warehouse_key is None or warehouse_key in allowed
