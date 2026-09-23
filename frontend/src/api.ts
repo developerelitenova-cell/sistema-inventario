@@ -299,9 +299,13 @@ export const getAssetDepreciation = (assetId: number) =>
 export const uploadAssetPhoto = async (assetId: number, file: File): Promise<Asset> => {
   const formData = new FormData();
   formData.append('photo', file);
+  const token = getToken();
   const res = await fetch(`${API_URL}/assets/${assetId}/photo`, {
     method: 'POST',
-    headers: { 'X-App-Password': getPassword() },
+    headers: {
+      'X-App-Password': getPassword(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: formData,
   });
   if (!res.ok) {
