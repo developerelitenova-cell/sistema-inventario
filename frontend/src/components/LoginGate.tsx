@@ -64,7 +64,8 @@ const LoginGate = ({ children }: LoginGateProps) => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f5f7fa' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+      <ThreeBackground />
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '360px', textAlign: 'center', position: 'relative', zIndex: 10, background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', color: '#1e293b', padding: '32px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
         <img src={logoIcon} alt="Sistema de Activos" style={{ height: '56px', margin: '0 auto 16px', display: 'block' }} />
         <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px', color: '#0f172a' }}>Sistema de Activos</h2>
