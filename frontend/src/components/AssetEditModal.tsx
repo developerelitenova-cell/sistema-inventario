@@ -31,6 +31,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     inventory_type: asset.inventory_type,
   });
   const [photo, setPhoto] = useState<string | null>(null);
+  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>(asset.additional_photos || []);
   const [showFullPhoto, setShowFullPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -336,6 +337,31 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
             )}
             <div style={{ maxWidth: '280px' }}>
               <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="4 / 3" facingMode="environment" />
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Camera size={14} /> Fotos adicionales ({additionalPhotos.length})
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {additionalPhotos.map((p, i) => (
+                <div key={i} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                  <img src={p} alt={`Extra ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                  <button type="button" onClick={() => setAdditionalPhotos(prev => prev.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '-4px', right: '-4px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', border: 'none', cursor: 'pointer' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ maxWidth: '280px' }}>
+              <CameraCapture 
+                photo={null} 
+                onCapture={(dataUrl) => setAdditionalPhotos(prev => [...prev, dataUrl])} 
+                onRetake={() => {}} 
+                aspect="4 / 3" 
+                facingMode="environment" 
+              />
             </div>
           </div>
 

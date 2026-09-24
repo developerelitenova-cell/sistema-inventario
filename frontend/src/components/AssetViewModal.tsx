@@ -30,13 +30,28 @@ export default function AssetViewModal({ asset, onClose }: AssetViewModalProps) 
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1">
               {asset.photo_url || asset.appsheet_photo_ref ? (
-                <img
-                  src={asset.photo_url || asset.appsheet_photo_ref!}
-                  alt={asset.description || 'Activo'}
-                  className="w-full h-auto rounded-xl border"
-                  style={{ maxHeight: '400px', objectFit: 'contain', borderColor: 'rgba(0,0,0,0.1)' }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+                <div>
+                  <img
+                    src={asset.photo_url || asset.appsheet_photo_ref!}
+                    alt={asset.description || 'Activo'}
+                    className="w-full h-auto rounded-xl border"
+                    style={{ maxHeight: '400px', objectFit: 'contain', borderColor: 'rgba(0,0,0,0.1)' }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  {asset.additional_photos && asset.additional_photos.length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '12px', paddingBottom: '8px' }}>
+                      {asset.additional_photos.map((p, i) => (
+                        <img 
+                          key={i} 
+                          src={p} 
+                          alt={`Extra ${i}`} 
+                          style={{ height: '80px', width: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.1)' }} 
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="w-full h-48 bg-gray-100 rounded-xl flex items-center justify-center text-[var(--text-secondary)]">
                   Sin imagen

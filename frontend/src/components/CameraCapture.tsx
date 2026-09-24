@@ -41,13 +41,29 @@ export default function CameraCapture({ photo, onCapture, onRetake, aspect = "1 
 
   const takePhoto = () => {
     if (!videoRef.current) return;
+    const vw = videoRef.current.videoWidth;
+    const vh = videoRef.current.videoHeight;
+    if (!vw || !vh) {
+      alert("La cámara aún se está inicializando. Intenta de nuevo.");
+      return;
+    }
+    const MAX_DIM = 800;
+    let width = vw;
+    let height = vh;
+    if (width > height && width > MAX_DIM) {
+      height *= MAX_DIM / width;
+      width = MAX_DIM;
+    } else if (height > MAX_DIM) {
+      width *= MAX_DIM / height;
+      height = MAX_DIM;
+    }
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      onCapture(canvas.toDataURL('image/jpeg', 0.8));
+      ctx.drawImage(videoRef.current, 0, 0, width, height);
+      onCapture(canvas.toDataURL('image/jpeg', 0.7));
       stopCamera();
     }
   };

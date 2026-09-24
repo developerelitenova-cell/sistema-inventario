@@ -31,6 +31,7 @@ class UserBase(BaseModel):
     email: Optional[str] = None
     document_id: str
     photo_url: Optional[str] = None
+    additional_photos: Optional[List[str]] = []
     digital_signature_url: Optional[str] = None
     role: RoleEnum
     cargo: Optional[str] = None
@@ -54,6 +55,7 @@ class RegisterRequest(BaseModel):
     document_id: str
     email: str
     photo_url: Optional[str] = None
+    additional_photos: Optional[List[str]] = []
     digital_signature_url: Optional[str] = None
 
 class LoginRequest(BaseModel):
@@ -82,6 +84,7 @@ class AssetBase(BaseModel):
     description: Optional[str] = None
     brand_model: Optional[str] = None
     photo_url: Optional[str] = None
+    additional_photos: Optional[List[str]] = []
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
     qr_data: str
     module: str
@@ -103,6 +106,7 @@ class AssetCreate(BaseModel):
     description: str
     brand_model: str
     photo_url: Optional[str] = None
+    additional_photos: Optional[List[str]] = []
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
     module: str
     area: Optional[str] = None

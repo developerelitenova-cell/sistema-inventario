@@ -99,6 +99,7 @@ export default function ChangePasswordModal({ onClose }: ChangePasswordModalProp
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 placeholder="Ingresa tu contraseña actual"
                 style={{ width: '100%' }}
               />
@@ -115,6 +116,7 @@ export default function ChangePasswordModal({ onClose }: ChangePasswordModalProp
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={8}
+                autoComplete="new-password"
                 placeholder="Ingresa tu nueva clave segura"
                 style={{ width: '100%' }}
               />
@@ -130,6 +132,7 @@ export default function ChangePasswordModal({ onClose }: ChangePasswordModalProp
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 placeholder="Repite tu nueva contraseña"
                 style={{ width: '100%' }}
               />

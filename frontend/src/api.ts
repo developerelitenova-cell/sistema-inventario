@@ -79,6 +79,7 @@ export interface Asset {
   value: number | null;
   accessories: AccessoryItem[];
   observations: string | null;
+  additional_photos?: string[];
   appsheet_photo_ref: string | null;
   inventory_type: InventoryType;
   category: Category | null;
@@ -131,6 +132,7 @@ export interface Loan {
   checkout_date: string | null;
   return_date: string | null;
   observations: string | null;
+  additional_photos?: string[];
   condition_status: string | null;
   security_authorization: string | null;
   borrowed_accessories?: AccessoryItem[] | null;
@@ -229,6 +231,7 @@ export interface AssetCreateInput {
   category?: Category;
   purchase_price?: number;
   purchase_date?: string;
+  additional_photos?: string[];
 }
 
 export const createAsset = (payload: AssetCreateInput) =>

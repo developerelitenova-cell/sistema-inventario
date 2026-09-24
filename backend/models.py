@@ -89,6 +89,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=True)
     document_id = Column(String, unique=True, index=True)
     photo_url = Column(String, nullable=True)
+    additional_photos = Column(JSON, default=list)
     digital_signature_url = Column(String, nullable=True)
     role = Column(Enum(RoleEnum), default=RoleEnum.EMPLEADO)
 
@@ -109,6 +110,7 @@ class Asset(Base):
     description = Column(String)
     brand_model = Column(String)
     photo_url = Column(String, nullable=True)
+    additional_photos = Column(JSON, default=list)
     status = Column(Enum(AssetStatusEnum), default=AssetStatusEnum.AVAILABLE)
     qr_data = Column(String, unique=True, index=True)
 

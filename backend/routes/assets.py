@@ -41,6 +41,16 @@ def create_asset(
         if uploaded:
             photo_url = uploaded
 
+    additional_photos_uploaded = []
+    if getattr(asset, 'additional_photos', None):
+        for idx, p in enumerate(asset.additional_photos):
+            if p and p.startswith("data:image"):
+                upl = upload_base64_image(p, "inventory-assets", "assets/photos", f"{asset.unique_code}_add_{idx}")
+                if upl:
+                    additional_photos_uploaded.append(upl)
+            elif p:
+                additional_photos_uploaded.append(p)
+
     # Generar QR (codifica el unique_code, es lo que lee el Scanner de seguridad)
     qr_base64 = qr_generator.generate_qr_base64(asset.unique_code)
 
@@ -88,22 +98,20 @@ def batch_generate_assets(
     if not prefix:
         raise HTTPException(status_code=400, detail="El prefijo no puede estar vacío")
 
-    existing_codes = {
-        code for (code,) in db.query(models.Asset.unique_code)
-        .filter(models.Asset.unique_code.like(f"{prefix}-%"))
-        .all()
-    }
-
+    # Buscamos continuidad global para el número final, ignorando el prefijo si se desea continuidad en todos los módulos.
     if payload.start_number is not None:
         next_number = payload.start_number
     else:
+        all_codes = {code for (code,) in db.query(models.Asset.unique_code).all()}
         max_number = 0
-        pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
-        for code in existing_codes:
-            match = pattern.match(code)
+        pattern = re.compile(r"-(\d+)$")
+        for code in all_codes:
+            match = pattern.search(code)
             if match:
                 max_number = max(max_number, int(match.group(1)))
         next_number = max_number + 1
+
+    existing_codes = {code for (code,) in db.query(models.Asset.unique_code).all()}
 
     created = []
     n = next_number
