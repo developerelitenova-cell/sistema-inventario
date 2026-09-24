@@ -179,6 +179,7 @@ class AssetAssignment(Base):
     expiration_date = Column(DateTime, nullable=False)
     status = Column(Enum(AssignmentStatusEnum), default=AssignmentStatusEnum.ACTIVE)
     notes = Column(Text, nullable=True)
+    security_authorization = Column(String, nullable=True)
 
     asset = relationship("Asset")
     user = relationship("User", foreign_keys=[user_id])

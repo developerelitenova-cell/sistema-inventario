@@ -1,5 +1,6 @@
 import { type Asset, STATUS_LABELS, CATEGORY_LABELS, INVENTORY_TYPE_LABELS } from '../api';
-import { X } from 'lucide-react';
+import { X, User as UserIcon } from 'lucide-react';
+import HolderInfoPopup from './HolderInfoPopup';
 
 interface AssetViewModalProps {
   asset: Asset;
@@ -73,8 +74,14 @@ export default function AssetViewModal({ asset, onClose }: AssetViewModalProps) 
                   <div className="text-sm">{asset.area || 'N/A'}</div>
                 </div>
                 <div>
-                  <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold">Responsable</label>
-                  <div className="text-sm">{asset.responsible_name || 'N/A'}</div>
+                  <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold flex items-center gap-1">
+                    <UserIcon size={12} /> Responsable
+                  </label>
+                  {(asset.status === 'assigned' || asset.status === 'loaned') ? (
+                    <HolderInfoPopup assetId={asset.id} />
+                  ) : (
+                    <div className="text-sm mt-1">{asset.responsible_name || 'N/A'}</div>
+                  )}
                 </div>
               </div>
 

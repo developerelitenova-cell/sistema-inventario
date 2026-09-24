@@ -179,6 +179,7 @@ async def checkout_loan(
     loan.status = models.LoanStatusEnum.CHECKED_OUT
     loan.checkout_date = get_colombia_time()
     loan.asset.status = models.AssetStatusEnum.LOANED
+    loan.asset.responsible_name = loan.borrower.full_name
     loan.borrowed_accessories = loan.asset.accessories
 
     audit.log_action(db, current_user, "loan.checked_out", f"{current_user.full_name} registró la salida del préstamo #{loan.id} (activo {loan.asset.unique_code}) con validación biométrica", entity_type="loan", entity_id=loan.id)
@@ -242,6 +243,7 @@ def return_loan(
         loan.asset.status = models.AssetStatusEnum.MAINTENANCE
     else:
         loan.asset.status = models.AssetStatusEnum.AVAILABLE
+    loan.asset.responsible_name = None
 
     if payload.observations:
         if loan.observations:

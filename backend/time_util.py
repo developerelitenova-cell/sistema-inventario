@@ -1,6 +1,9 @@
-from datetime import datetime, timezone, timedelta
-
-COLOMBIA_TZ = timezone(timedelta(hours=-5))
+from datetime import datetime, timezone
 
 def get_colombia_time():
-    return datetime.now(COLOMBIA_TZ).replace(tzinfo=None)
+    """
+    Retorna la hora actual en UTC.
+    El formateo a hora local (Bogotá/Colombia) se debe realizar en el frontend
+    interpretando correctamente la fecha UTC ('Z').
+    """
+    return datetime.now(timezone.utc)

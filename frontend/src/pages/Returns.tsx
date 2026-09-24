@@ -3,6 +3,7 @@ import { PackageCheck, Package } from 'lucide-react';
 import { getLoans, returnLoan, type Loan } from '../api';
 import { useModule } from '../moduleContext';
 import UserProfileCard from '../components/UserProfileCard';
+import { formatBogotaTime } from '../utils/dateUtils';
 
 const Returns = () => {
   const { module } = useModule();
@@ -70,7 +71,7 @@ const Returns = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                 <UserProfileCard
                   user={loan.borrower}
-                  subtitle={`Salió el ${loan.checkout_date ? new Date(loan.checkout_date).toLocaleString('es-CO') : '—'}`}
+                  subtitle={`Salió el ${formatBogotaTime(loan.checkout_date)}`}
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                   <Package size={16} />

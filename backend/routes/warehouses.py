@@ -22,7 +22,11 @@ def get_warehouses(
     db: Session = Depends(get_db),
     _user: models.User = Depends(auth_service.get_current_user),
 ):
-    return db.query(models.Warehouse).order_by(models.Warehouse.name).all()
+    query = db.query(models.Warehouse)
+    allowed_keys = auth_service.visible_warehouse_keys(_user)
+    if allowed_keys is not None:
+        query = query.filter(models.Warehouse.key.in_(allowed_keys))
+    return query.order_by(models.Warehouse.name).all()
 
 
 @router.post("/", response_model=schemas.Warehouse)

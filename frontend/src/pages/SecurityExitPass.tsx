@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getLoan, checkoutLoanSecurity, type Loan } from '../api';
 import { CheckCircle, Shield, Check } from 'lucide-react';
+import { formatBogotaTime } from '../utils/dateUtils';
 
 export default function SecurityExitPass() {
   const { id } = useParams<{ id: string }>();
@@ -271,7 +272,7 @@ export default function SecurityExitPass() {
              <div className="bg-white p-2 rounded-lg h-32 flex items-center justify-center relative w-64">
                 <img src={(loan as any).security_signature_url} alt="Firma Pentágono" className="max-h-full max-w-full object-contain mix-blend-multiply" />
              </div>
-             <p className="text-gray-500 text-sm mt-2">Salida registrada el: {new Date(loan.checkout_date!).toLocaleString()}</p>
+             <p className="text-gray-500 text-sm mt-2">Salida registrada el: {formatBogotaTime(loan.checkout_date)}</p>
           </div>
         )}
       </div>

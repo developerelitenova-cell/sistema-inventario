@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { getActivityLogs, isMasterAdmin, type ActivityLog } from '../api';
 import { Avatar } from '../components/UserProfileCard';
 import { getCachedUser } from '../components/LoginGate';
+import { formatBogotaTime } from '../utils/dateUtils';
 
 const PAGE_SIZE = 100;
 
@@ -77,7 +78,7 @@ const ActivityLogs = () => {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.95rem' }}>{log.description}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {new Date(log.created_at).toLocaleString('es-CO')}
+                  {formatBogotaTime(log.created_at)}
                   {log.entity_type && ` · ${ENTITY_LABELS[log.entity_type] || log.entity_type}`}
                 </div>
               </div>

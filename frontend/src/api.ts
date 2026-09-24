@@ -390,6 +390,16 @@ export const returnLoan = (loanId: number, details?: { observations?: string; co
     body: JSON.stringify(details || {}),
   });
 
+export interface AssetHolderInfo {
+  type: 'assignment' | 'loan';
+  user: User;
+  since: string;
+  notes?: string;
+}
+
+export const getAssetHolder = (assetId: number) =>
+  request<AssetHolderInfo>(`/assets/${assetId}/holder`, { method: 'GET' });
+
 export const returnAsset = (assetId: number, details?: { observations?: string; condition_status?: string }) =>
   request<Loan>(`/assets/${assetId}/return`, {
     method: 'POST',
@@ -415,10 +425,10 @@ export interface Assignment {
 export const getAssignments = (statusFilter?: AssignmentStatus) =>
   request<Assignment[]>(`/assignments/${statusFilter ? `?status_filter=${statusFilter}` : ''}`);
 
-export const createAssignment = (assetId: number, userId: number, authorizedById: number | null, durationDays: number, notes: string) =>
+export const createAssignment = (assetId: number, userId: number, authorizedById: number | null, durationDays: number, notes: string, securityAuthorization: string | null = null) =>
   request<Assignment>('/assignments/', {
     method: 'POST',
-    body: JSON.stringify({ asset_id: assetId, user_id: userId, authorized_by_id: authorizedById, duration_days: durationDays, notes }),
+    body: JSON.stringify({ asset_id: assetId, user_id: userId, authorized_by_id: authorizedById, duration_days: durationDays, notes, security_authorization: securityAuthorization }),
   });
 
 export const renewAssignment = (assignmentId: number, durationDays: number) =>

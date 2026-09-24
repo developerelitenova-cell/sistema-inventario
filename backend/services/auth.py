@@ -70,11 +70,15 @@ def require_role(*roles: "models.RoleEnum"):
 
 def visible_warehouse_keys(user: "models.User") -> Optional[List[str]]:
     """None = sin restricción (ve/opera sobre todas las bodegas).
-    Lista = solo esas bodegas. Aplica igual para cualquier rol: un usuario
-    sin bodegas asignadas queda sin restricción (así es como un admin
-    "maestro" se distingue de un admin acotado a su(s) bodega(s))."""
+    Lista = solo esas bodegas.
+    Solo un ADMIN sin bodegas asignadas tiene restricción None (Admin Maestro).
+    Cualquier otro rol sin bodegas asignadas devuelve [] (no ve nada)."""
     keys = [w.key for w in user.warehouses]
-    return keys or None
+    if keys:
+        return keys
+    if user.role == models.RoleEnum.ADMIN:
+        return None
+    return []
 
 
 def can_access_warehouse(user: "models.User", warehouse_key: Optional[str]) -> bool:

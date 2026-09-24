@@ -384,25 +384,62 @@ def verify_asset_status(
         .first()
     )
 
+    active_assignment = None
+    if not active_loan and asset.status == models.AssetStatusEnum.ASSIGNED:
+        active_assignment = (
+            db.query(models.AssetAssignment)
+            .filter(
+                models.AssetAssignment.asset_id == asset.id,
+                models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+            )
+            .first()
+        )
+
     is_authorized = False
     if active_loan:
         is_authorized = (
             active_loan.status in [models.LoanStatusEnum.APPROVED, models.LoanStatusEnum.CHECKED_OUT]
             and active_loan.security_authorization == "AUTORIZADO_SALIDA"
         )
+    elif active_assignment:
+        is_authorized = active_assignment.security_authorization == "AUTORIZADO_SALIDA"
 
-    has_signature = bool(active_loan.borrower.digital_signature_url) if (active_loan and active_loan.borrower) else False
+    borrower = active_loan.borrower if active_loan else (active_assignment.user if active_assignment else None)
+    has_signature = bool(borrower.digital_signature_url) if borrower else False
+
+    loan_status_val = None
+    if active_loan:
+        loan_status_val = active_loan.status.value
+    elif active_assignment:
+        loan_status_val = 'assignment'
 
     return {
         "asset_code": asset.unique_code,
         "asset_description": asset.description,
         "status": asset.status.value,
         "is_authorized_to_leave": is_authorized,
-        "loan_status": active_loan.status.value if active_loan else None,
+        "loan_status": loan_status_val,
         "loan_id": active_loan.id if active_loan else None,
-        "borrower_name": active_loan.borrower.full_name if active_loan else None,
-        "borrower_photo": active_loan.borrower.photo_url if active_loan else None,
-        "borrower_document_id": active_loan.borrower.document_id if active_loan else None,
+        "borrower_name": borrower.full_name if borrower else None,
+        "borrower_photo": borrower.photo_url if borrower else None,
+        "borrower_document_id": borrower.document_id if borrower else None,
         "borrower_signature": "FIRMA_REGISTRADA" if has_signature else None,
         "has_digital_signature": has_signature,
     }
+@router.get("/assets/{asset_id}/holder")
+def get_asset_holder(asset_id: int, db: Session = Depends(get_db)):
+    asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    
+    if asset.status == models.AssetStatusEnum.ASSIGNED:
+        assignment = db.query(models.AssetAssignment).filter(models.AssetAssignment.asset_id == asset_id, models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE).first()
+        if assignment:
+            return {"type": "assignment", "user": assignment.user, "since": assignment.start_date, "notes": assignment.notes}
+            
+    if asset.status == models.AssetStatusEnum.LOANED:
+        loan = db.query(models.Loan).filter(models.Loan.asset_id == asset_id, models.Loan.status == models.LoanStatusEnum.CHECKED_OUT).first()
+        if loan:
+            return {"type": "loan", "user": loan.borrower, "since": loan.checkout_date, "notes": loan.reason}
+            
+    raise HTTPException(status_code=404, detail="El activo no tiene un responsable activo registrado en el sistema")

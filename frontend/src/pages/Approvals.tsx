@@ -4,6 +4,7 @@ import { getLoans, approveLoan, type Loan } from '../api';
 import { useModule } from '../moduleContext';
 import { getCachedUser } from '../components/LoginGate';
 import UserProfileCard from '../components/UserProfileCard';
+import { formatBogotaTime } from '../utils/dateUtils';
 
 const Approvals = () => {
   const { module } = useModule();
@@ -92,7 +93,7 @@ const Approvals = () => {
                 <div style={{ marginBottom: '8px' }}>
                   <UserProfileCard
                     user={loan.borrower}
-                    subtitle={`Solicitado el ${new Date(loan.request_date).toLocaleString('es-CO')}`}
+                    subtitle={`Solicitado el ${formatBogotaTime(loan.request_date)}`}
                   />
                 </div>
                 {loan.reason && (

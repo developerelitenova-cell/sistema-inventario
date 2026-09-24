@@ -132,7 +132,7 @@ const Scanner = () => {
                   </p>
                 </div>
               </div>
-            ) : verification.loan_status === 'approved' ? (
+            ) : verification.loan_status === 'approved' || (verification.loan_status === 'assignment' && !verification.is_authorized_to_leave) ? (
               <div style={{ color: 'var(--danger-color)' }}>
                 <XCircle size={64} style={{ margin: '0 auto 16px' }} />
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px' }}>USO INTERNO — SIN SALIDA</h2>
@@ -142,6 +142,16 @@ const Scanner = () => {
                     Asignado a <strong style={{ color: 'white' }}>{verification.borrower_name}</strong>, pero para uso interno — no tiene autorización para salir del edificio.
                   </p>
                 </div>
+              </div>
+            ) : verification.loan_status === 'assignment' && verification.is_authorized_to_leave ? (
+              <div style={{ color: 'var(--success-color)' }}>
+                <CheckCircle size={64} style={{ margin: '0 auto 16px' }} />
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>SALIDA AUTORIZADA</h2>
+                <div style={{ color: 'var(--text-primary)', marginBottom: '24px' }}>
+                  <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{verification.asset_description}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Asignación de: <strong style={{ color: 'white' }}>{verification.borrower_name}</strong></p>
+                </div>
+                <p style={{ color: 'var(--text-secondary)' }}>Este activo está asignado de forma prolongada y autorizado para salir libremente.</p>
               </div>
             ) : (
               <div style={{ color: 'var(--danger-color)' }}>

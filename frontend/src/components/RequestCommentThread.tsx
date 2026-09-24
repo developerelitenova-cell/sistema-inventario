@@ -3,6 +3,7 @@ import { MessageCircle, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { getRequestComments, addRequestComment, type RequestComment } from '../api';
 import { Avatar } from './UserProfileCard';
 import { getCachedUser } from './LoginGate';
+import { formatBogotaTime } from '../utils/dateUtils';
 
 interface RequestCommentThreadProps {
   requestId: number;
@@ -17,20 +18,25 @@ const RequestCommentThread = ({ requestId }: RequestCommentThreadProps) => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => {
-    getRequestComments(requestId)
-      .then((data) => { 
-        setComments(data); 
-        setLoaded(true); 
-        localStorage.setItem(`read_msg_${requestId}`, new Date().toISOString());
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  const load = async () => {
+    try {
+      const data = await getRequestComments(requestId);
+      setComments(data);
+      setLoaded(true);
+      localStorage.setItem(`read_msg_${requestId}`, new Date().toISOString());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   useEffect(() => {
-    if (expanded && !loaded) load();
+    if (expanded) {
+      if (!loaded) load();
+      const interval = setInterval(load, 5000); // Polling cada 5 segundos
+      return () => clearInterval(interval);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded]);
+  }, [expanded, loaded]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,7 +82,7 @@ const RequestCommentThread = ({ requestId }: RequestCommentThreadProps) => {
                   <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                     {c.author.full_name}
                     <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: '8px' }}>
-                      {new Date(c.created_at).toLocaleString('es-CO')}
+                      {formatBogotaTime(c.created_at)}
                     </span>
                   </div>
                   <div style={{ fontSize: '0.9rem', marginTop: '2px' }}>{c.message}</div>

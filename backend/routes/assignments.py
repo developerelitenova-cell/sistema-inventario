@@ -15,6 +15,7 @@ router = APIRouter(prefix="/assignments", tags=["Asignaciones"])
 def revoke_assignment_internal(db: Session, assignment: models.AssetAssignment, actor: Optional[models.User] = None) -> models.AssetAssignment:
     assignment.status = models.AssignmentStatusEnum.REVOKED
     assignment.asset.status = models.AssetStatusEnum.AVAILABLE
+    assignment.asset.responsible_name = None
     actor_name = actor.full_name if actor else "Sistema"
     audit.log_action(db, actor, "assignment.revoked", f"{actor_name} revocó la asignación #{assignment.id} ({assignment.asset.unique_code} — {assignment.user.full_name})", entity_type="assignment", entity_id=assignment.id)
     db.commit()
@@ -37,6 +38,10 @@ def get_assignments(
     
     if current_user.role == models.RoleEnum.EMPLEADO:
         query = query.filter(models.AssetAssignment.user_id == current_user.id)
+    elif current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+        allowed = auth_service.visible_warehouse_keys(current_user)
+        if allowed is not None:
+            query = query.join(models.Asset).filter(models.Asset.module.in_(allowed))
 
     return query.order_by(models.AssetAssignment.expiration_date.asc()).all()
 
@@ -59,9 +64,15 @@ def create_assignment(
         authorized_by_id=current_user.id,
         expiration_date=get_colombia_time() + timedelta(days=payload.duration_days),
         notes=payload.notes,
+        security_authorization=payload.security_authorization,
         status=models.AssignmentStatusEnum.ACTIVE,
     )
     asset.status = models.AssetStatusEnum.ASSIGNED
+    
+    # We must fetch the user to get their full_name, or we can just fetch it from DB
+    user = db.query(models.User).filter(models.User.id == payload.user_id).first()
+    if user:
+        asset.responsible_name = user.full_name
 
     db.add(assignment)
     db.commit()

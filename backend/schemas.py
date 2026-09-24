@@ -196,6 +196,7 @@ class AssignmentCreate(BaseModel):
     authorized_by_id: Optional[int] = None
     duration_days: int = 90
     notes: Optional[str] = None
+    security_authorization: Optional[str] = None
 
 class Assignment(BaseModel):
     id: int
@@ -206,6 +207,7 @@ class Assignment(BaseModel):
     expiration_date: datetime
     status: AssignmentStatusEnum
     notes: Optional[str] = None
+    security_authorization: Optional[str] = None
 
     asset: Asset
     user: User

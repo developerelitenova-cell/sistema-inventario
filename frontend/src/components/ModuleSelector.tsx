@@ -22,14 +22,7 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Igual que en el backend: sin bodegas asignadas = sin restricción (admin
-  // maestro). Con bodegas asignadas, se ve solo esa lista -- aplica a
-  // cualquier rol, incluido un admin acotado a su propia bodega.
-  const accessibleKeys = currentUser && currentUser.warehouses.length > 0
-    ? new Set(currentUser.warehouses.map((w) => w.key))
-    : null;
-
-  const visible = warehouses.filter((w) => w.is_active && (!accessibleKeys || accessibleKeys.has(w.key)));
+  const visible = warehouses.filter((w) => w.is_active);
 
   useEffect(() => {
     if (visible.length && !visible.some((w) => w.key === module)) {
@@ -75,9 +68,15 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   };
 
   return (
-    <div className="w-full flex justify-center my-6 px-4">
+    <div className="w-full flex justify-center my-6 px-4 relative group">
+      {/* Indicadores visuales sutiles de scroll horizontal */}
+      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[rgba(255,255,255,0.8)] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 hidden md:block" />
+      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[rgba(255,255,255,0.8)] to-transparent pointer-events-none z-10 flex items-center justify-end pr-2 animate-pulse">
+        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider rotate-90 md:rotate-0">Deslizar</span>
+      </div>
+      
       <div
-        className={`liquid-glass p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto scrollbar-hide shadow-sm max-w-full ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
+        className={`liquid-glass p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto scrollbar-hide shadow-sm max-w-full relative ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
         style={{
           background: 'rgba(0,0,0,0.04)',
           border: '1px solid rgba(0,0,0,0.08)'

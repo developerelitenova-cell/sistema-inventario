@@ -17,7 +17,7 @@ const Assignments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ assetId: '', userId: '', durationDays: '90', notes: '' });
+  const [form, setForm] = useState({ assetId: '', userId: '', durationDays: '90', notes: '', securityAuthorization: 'INTERNO' });
   const [submitting, setSubmitting] = useState(false);
 
   const load = () => {
@@ -38,8 +38,8 @@ const Assignments = () => {
     if (!form.assetId || !form.userId) return;
     setSubmitting(true);
     try {
-      await createAssignment(Number(form.assetId), Number(form.userId), null, Number(form.durationDays) || 90, form.notes);
-      setForm({ assetId: '', userId: '', durationDays: '90', notes: '' });
+      await createAssignment(Number(form.assetId), Number(form.userId), null, Number(form.durationDays) || 90, form.notes, form.securityAuthorization);
+      setForm({ assetId: '', userId: '', durationDays: '90', notes: '', securityAuthorization: 'INTERNO' });
       setShowForm(false);
       load();
     } catch (err) {
@@ -94,7 +94,13 @@ const Assignments = () => {
               placeholder="Días"
             />
           </div>
-          <input className="input-field" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas (opcional)" />
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <select className="input-field" style={{ flex: 1, minWidth: '200px' }} value={form.securityAuthorization} onChange={(e) => setForm({ ...form, securityAuthorization: e.target.value })}>
+              <option value="INTERNO">Activo para uso interno (No autorizado para salir)</option>
+              <option value="AUTORIZADO_SALIDA">Activo autorizado para salir de la empresa</option>
+            </select>
+            <input className="input-field" style={{ flex: 2, minWidth: '200px' }} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas (opcional)" />
+          </div>
           <button className="btn btn-primary" onClick={handleCreate} disabled={submitting || !form.assetId || !form.userId}>
             {submitting ? 'Creando...' : 'Autorizar asignación'}
           </button>
@@ -123,6 +129,13 @@ const Assignments = () => {
                   <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
                     Asignado a: <strong style={{ color: 'var(--text-primary)' }}>{a.user.full_name}</strong>
                     {a.notes && <> · {a.notes}</>}
+                  </div>
+                  <div style={{ marginTop: '4px' }}>
+                    {a.security_authorization === 'AUTORIZADO_SALIDA' ? (
+                      <span className="badge badge-available" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>Autorizado para salir</span>
+                    ) : (
+                      <span className="badge badge-loaned" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>Uso interno</span>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
