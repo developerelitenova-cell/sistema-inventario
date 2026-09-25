@@ -441,6 +441,9 @@ export const renewAssignment = (assignmentId: number, durationDays: number) =>
 export const revokeAssignment = (assignmentId: number) =>
   request<Assignment>(`/assignments/${assignmentId}/revoke`, { method: 'POST' });
 
+export const updateAssignment = (assignmentId: number, payload: Partial<{ security_authorization: string; notes: string }>) =>
+  request<Assignment>(`/assignments/${assignmentId}`, { method: 'PUT', body: JSON.stringify(payload) });
+
 export type AssetRequestStatus = 'pending' | 'assigned' | 'rejected';
 
 export interface AssetRequest {

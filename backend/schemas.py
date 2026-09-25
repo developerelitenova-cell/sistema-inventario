@@ -202,6 +202,10 @@ class AssignmentCreate(BaseModel):
     notes: Optional[str] = None
     security_authorization: Optional[str] = None
 
+class AssignmentUpdate(BaseModel):
+    security_authorization: Optional[str] = None
+    notes: Optional[str] = None
+
 class Assignment(BaseModel):
     id: int
     asset_id: int

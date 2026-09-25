@@ -116,3 +116,26 @@ def revoke_assignment(
         raise HTTPException(status_code=403, detail="No podés revocar asignaciones de esta bodega")
 
     return revoke_assignment_internal(db, assignment, current_user)
+
+@router.put("/{assignment_id}", response_model=schemas.Assignment)
+def update_assignment(
+    assignment_id: int, 
+    payload: schemas.AssignmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
+):
+    assignment = db.query(models.AssetAssignment).filter(models.AssetAssignment.id == assignment_id).first()
+    if not assignment or assignment.status != models.AssignmentStatusEnum.ACTIVE:
+        raise HTTPException(status_code=400, detail="Asignación no válida para actualizar")
+    if not auth_service.can_access_warehouse(current_user, assignment.asset.module):
+        raise HTTPException(status_code=403, detail="No podés editar asignaciones de esta bodega")
+
+    if payload.security_authorization is not None:
+        assignment.security_authorization = payload.security_authorization
+    if payload.notes is not None:
+        assignment.notes = payload.notes
+
+    audit.log_action(db, current_user, "assignment.updated", f"Se actualizó la asignación #{assignment.id} ({assignment.asset.unique_code})", entity_type="assignment", entity_id=assignment.id)
+    db.commit()
+    db.refresh(assignment)
+    return assignment
