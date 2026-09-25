@@ -146,7 +146,7 @@ export interface VerificationResult {
   asset_description: string;
   status: AssetStatus;
   is_authorized_to_leave: boolean;
-  loan_status: LoanStatus | null;
+  loan_status: LoanStatus | 'assignment' | null;
   loan_id: number | null;
   borrower_name: string | null;
   borrower_photo: string | null;
@@ -420,6 +420,7 @@ export interface Assignment {
   expiration_date: string;
   status: AssignmentStatus;
   notes: string | null;
+  security_authorization: string | null;
   asset: Asset;
   user: User;
   authorized_by: User | null;
