@@ -112,7 +112,7 @@ const UserCreateModal = ({ onClose, onCreated }: UserCreateModalProps) => {
 
           <div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-              Bodegas con acceso {isMaster ? '(ninguna seleccionada = ve todas)' : ''}
+              Bodegas con acceso {isMaster ? '(ninguna = ve todas)' : ''} {role === 'empleado' || role === 'salida' ? '(Selecciona la empresa a la que pertenece)' : ''}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: '8px', padding: '10px' }}>
               {assignableWarehouses.map((w) => (
