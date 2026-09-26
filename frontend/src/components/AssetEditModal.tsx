@@ -1,7 +1,8 @@
+import { getCachedUser } from './LoginGate';
 import { useState, useEffect, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Printer, Camera } from 'lucide-react';
-import { updateAsset, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, getAreaOptions, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
+import { updateAsset, deleteAsset, isMasterAdmin, uploadAssetPhoto, getAssetDepreciation, formatCOP, CATEGORY_LABELS, STATUS_LABELS, INVENTORY_TYPE_LABELS, getAreaOptions, type Asset, type Module, type AssetStatus, type Depreciation, type InventoryType } from '../api';
 import { useWarehouses } from '../warehouseContext';
 import CameraCapture from './CameraCapture';
 
@@ -34,6 +35,8 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>(asset.additional_photos || []);
   const [showFullPhoto, setShowFullPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
+  const currentUser = getCachedUser();
+  const isMaster = isMasterAdmin(currentUser);
   const [error, setError] = useState<string | null>(null);
   const [depreciation, setDepreciation] = useState<Depreciation | null>(null);
 
@@ -59,6 +62,18 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     const acc = [...form.accessories];
     acc.splice(index, 1);
     setForm(f => ({ ...f, accessories: acc }));
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar este activo? Esta acción no se puede deshacer.")) return;
+    setSaving(true);
+    try {
+      await deleteAsset(asset.id);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setSaving(false);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -382,6 +397,11 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
             <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
+            {isMaster && (
+              <button type="button" disabled={saving} onClick={handleDelete} className="btn" style={{ background: 'var(--danger-color)', color: 'white', flex: 1 }}>
+                Eliminar
+              </button>
+            )}
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>

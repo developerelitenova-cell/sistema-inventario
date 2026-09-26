@@ -451,3 +451,22 @@ def get_asset_holder(asset_id: int, db: Session = Depends(get_db)):
             return {"type": "loan", "user": loan.borrower, "since": loan.checkout_date, "notes": loan.reason}
             
     raise HTTPException(status_code=404, detail="El activo no tiene un responsable activo registrado en el sistema")
+
+@router.delete("/{asset_id}", status_code=204)
+def delete_asset(
+    asset_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_master_admin()),
+):
+    asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    
+    # Check if there are active loans
+    if asset.status in (models.AssetStatusEnum.LOANED, models.AssetStatusEnum.ASSIGNED):
+        raise HTTPException(status_code=400, detail="No se puede eliminar un activo que está en préstamo o asignado")
+
+    db.delete(asset)
+    audit.log_action(db, _admin, "asset.deleted", f"{_admin.full_name} eliminó el activo {asset.unique_code}", entity_type="asset", entity_id=asset_id)
+    db.commit()
+    return None

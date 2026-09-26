@@ -23,9 +23,9 @@ const Navbar = () => {
     }
   };
 
-  const isEmpleado = currentUser?.role === 'empleado';
-  const isAdmin = currentUser?.role === 'admin';
-  const isEncargadoOrAdmin = currentUser?.role === 'encargado' || isAdmin;
+  const isEmpleado = currentUser?.role?.toLowerCase() === 'empleado';
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+  const isEncargadoOrAdmin = currentUser?.role?.toLowerCase() === 'encargado' || isAdmin;
   const isMaster = isMasterAdmin(currentUser);
 
   const [stockAlertCount, setStockAlertCount] = useState(0);

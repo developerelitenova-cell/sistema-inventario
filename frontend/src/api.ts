@@ -522,3 +522,5 @@ export const getActivityLogs = (params?: { entity_type?: string; actor_id?: numb
   const qs = query.toString();
   return request<ActivityLog[]>(`/activity-logs/${qs ? `?${qs}` : ''}`);
 };
+
+export const deleteAsset = (id: number) => request(`/assets/${id}`, { method: 'DELETE' });
