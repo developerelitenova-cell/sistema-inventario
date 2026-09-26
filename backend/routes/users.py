@@ -69,7 +69,7 @@ def create_user(
 @router.get("/users/", response_model=List[schemas.User])
 def get_users(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+    current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
     if auth_service.is_master_admin(current_user):
         return db.query(models.User).all()

@@ -129,7 +129,7 @@ const Navbar = () => {
     { path: '/returns', label: 'Devoluciones', icon: PackageCheck, show: !isEmpleado && currentUser?.role !== 'salida' },
     { path: '/unused', label: 'Sin Uso', icon: AlertTriangle, show: isEncargadoOrAdmin },
     { path: '/assignments', label: 'Asignaciones', icon: UserCheck, show: isEncargadoOrAdmin },
-    { path: '/responsibles', label: 'Personal', icon: Contact, show: isEncargadoOrAdmin },
+    { path: '/responsibles', label: 'Personal', icon: Contact, show: isAdmin },
     { path: '/accounting', label: 'Contabilidad', icon: Calculator, show: isMaster },
     { path: '/users', label: 'Usuarios', icon: UsersIcon, show: isAdmin },
     { path: '/logs', label: 'Logs', icon: ScrollText, show: isMaster },
