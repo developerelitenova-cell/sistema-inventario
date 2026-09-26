@@ -26,12 +26,16 @@ def create_asset_request(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.get_current_user),
 ):
-    if payload.module and not auth_service.can_access_warehouse(current_user, payload.module):
+    module = payload.module
+    if not module and current_user.warehouses:
+        module = current_user.warehouses[0].key
+
+    if module and not auth_service.can_access_warehouse(current_user, module):
         raise HTTPException(status_code=403, detail="No tienes acceso a esta bodega")
 
     new_request = models.AssetRequest(
         requester_id=current_user.id,
-        module=payload.module,
+        module=module,
         category_requested=payload.category_requested,
         description=payload.description,
         status=models.RequestStatusEnum.PENDING,
