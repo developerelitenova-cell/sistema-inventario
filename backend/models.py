@@ -182,6 +182,7 @@ class AssetAssignment(Base):
     status = Column(Enum(AssignmentStatusEnum), default=AssignmentStatusEnum.ACTIVE)
     notes = Column(Text, nullable=True)
     security_authorization = Column(String, nullable=True)
+    is_accepted = Column(Boolean, default=False)
 
     asset = relationship("Asset")
     user = relationship("User", foreign_keys=[user_id])

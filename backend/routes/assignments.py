@@ -83,6 +83,30 @@ def create_assignment(
     return assignment
 
 
+@router.post("/{assignment_id}/accept", response_model=schemas.Assignment)
+def accept_assignment(
+    assignment_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    assignment = db.query(models.AssetAssignment).filter(models.AssetAssignment.id == assignment_id).first()
+    if not assignment or assignment.status != models.AssignmentStatusEnum.ACTIVE:
+        raise HTTPException(status_code=400, detail="Asignación no válida")
+    
+    if assignment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el asignado puede confirmar la recepción del equipo")
+        
+    if assignment.is_accepted:
+        raise HTTPException(status_code=400, detail="El equipo ya fue confirmado previamente")
+
+    assignment.is_accepted = True
+
+    audit.log_action(db, current_user, "assignment.accepted", f"{current_user.full_name} confirmó la recepción física de la asignación #{assignment.id} (activo {assignment.asset.unique_code})", entity_type="assignment", entity_id=assignment.id)
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
+
 @router.post("/{assignment_id}/renew", response_model=schemas.Assignment)
 def renew_assignment(
     assignment_id: int, 

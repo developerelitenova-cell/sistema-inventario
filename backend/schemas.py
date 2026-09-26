@@ -217,6 +217,7 @@ class Assignment(BaseModel):
     status: AssignmentStatusEnum
     notes: Optional[str] = None
     security_authorization: Optional[str] = None
+    is_accepted: bool = False
 
     asset: Asset
     user: User

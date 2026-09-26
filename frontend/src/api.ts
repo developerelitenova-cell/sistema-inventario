@@ -382,6 +382,9 @@ export const directLoan = (assetId: number, borrowerId: number, reason: string, 
     body: JSON.stringify({ asset_id: assetId, borrower_id: borrowerId, reason, requires_exit_pass: requiresExitPass }),
   });
 
+export const acceptLoan = (loanId: number) =>
+  request<Loan>(`/loans/${loanId}/accept`, { method: 'POST' });
+
 export const checkoutLoanSecurity = (loanId: number, securitySignatureBase64: string, borrowedAccessories?: AccessoryItem[]) =>
   request<Loan>(`/loans/${loanId}/checkout-security`, {
     method: 'POST',
@@ -438,6 +441,9 @@ export const createAssignment = (assetId: number, userId: number, authorizedById
 
 export const renewAssignment = (assignmentId: number, durationDays: number) =>
   request<Assignment>(`/assignments/${assignmentId}/renew?duration_days=${durationDays}`, { method: 'POST' });
+
+export const acceptAssignment = (assignmentId: number) =>
+  request<Assignment>(`/assignments/${assignmentId}/accept`, { method: 'POST' });
 
 export const revokeAssignment = (assignmentId: number) =>
   request<Assignment>(`/assignments/${assignmentId}/revoke`, { method: 'POST' });

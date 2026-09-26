@@ -3,7 +3,7 @@ import { Search, Pencil, Send, Info, CornerDownLeft } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
-  getLoans, getAssignments, returnAsset,
+  getLoans, getAssignments, returnAsset, acceptLoan, acceptAssignment,
   type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType,
   type Loan, type Assignment
 } from '../api';
@@ -43,6 +43,24 @@ const EmployeeRequestView = () => {
     ])
     .catch((err) => setError(err.message))
     .finally(() => setLoading(false));
+  };
+
+  const handleAcceptLoan = async (id: number) => {
+    try {
+      await acceptLoan(id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleAcceptAssignment = async (id: number) => {
+    try {
+      await acceptAssignment(id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    }
   };
 
   useEffect(load, []);
@@ -185,7 +203,7 @@ const EmployeeRequestView = () => {
           ) : (
             <>
               {assignments.map(a => (
-                <div key={`assign-${a.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div key={`assign-${a.id}`} className={`glass-panel ${!a.is_accepted ? 'border-l-4 border-yellow-400 bg-yellow-50/10' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ fontWeight: 600 }}>{a.asset.description}</div>
                     <span className="badge badge-assigned">Asignación Fija</span>
@@ -195,19 +213,37 @@ const EmployeeRequestView = () => {
                     Vence: {new Date(a.expiration_date).toLocaleDateString()} <br/>
                     {a.notes && <span>Nota: {a.notes}</span>}
                   </div>
+                  {!a.is_accepted && (
+                    <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ca8a04', marginBottom: '8px' }}>Tienes este equipo pendiente por recoger.</p>
+                      <button className="btn btn-primary w-full" onClick={() => handleAcceptAssignment(a.id)}>
+                        Recibí este equipo
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
               {loans.filter(l => l.status === 'checked_out' || l.status === 'approved').map(l => (
-                <div key={`loan-${l.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div key={`loan-${l.id}`} className={`glass-panel ${l.status === 'approved' ? 'border-l-4 border-yellow-400 bg-yellow-50/10' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <div style={{ fontWeight: 600 }}>{l.asset.description}</div>
-                    <span className="badge badge-loaned">Préstamo Activo</span>
+                    <span className="badge badge-loaned">
+                      {l.status === 'approved' ? 'Pendiente de Entrega' : 'Préstamo Activo'}
+                    </span>
                   </div>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                     Código: {l.asset.unique_code} <br/>
                     Aprobado: {l.approval_date ? new Date(l.approval_date).toLocaleDateString() : 'Pendiente'} <br/>
                     Motivo: {l.reason}
                   </div>
+                  {l.status === 'approved' && (
+                    <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ca8a04', marginBottom: '8px' }}>Tienes este equipo pendiente por recoger.</p>
+                      <button className="btn btn-primary w-full" onClick={() => handleAcceptLoan(l.id)}>
+                        Recibí este equipo
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </>

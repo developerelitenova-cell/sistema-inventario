@@ -152,6 +152,33 @@ def approve_loan(
     return loan
 
 
+@router.post("/loans/{loan_id}/accept", response_model=schemas.Loan)
+def accept_loan(
+    loan_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user),
+):
+    loan = db.query(models.Loan).filter(models.Loan.id == loan_id).first()
+    if not loan or loan.status != models.LoanStatusEnum.APPROVED:
+        raise HTTPException(status_code=400, detail="Préstamo no está en estado pendiente de entrega")
+    if loan.borrower_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el solicitante puede confirmar la recepción del equipo")
+
+    # Si es de uso interno o salida, pasa a CHECKED_OUT (Entregado al empleado).
+    loan.status = models.LoanStatusEnum.CHECKED_OUT
+    loan.checkout_date = get_colombia_time()
+    
+    # Asegurar status del activo
+    loan.asset.status = models.AssetStatusEnum.LOANED
+    loan.asset.responsible_name = loan.borrower.full_name
+    loan.borrowed_accessories = loan.asset.accessories
+
+    audit.log_action(db, current_user, "loan.accepted", f"{current_user.full_name} confirmó la recepción física del préstamo #{loan.id} (activo {loan.asset.unique_code})", entity_type="loan", entity_id=loan.id)
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
 @router.post("/loans/{loan_id}/checkout", response_model=schemas.Loan)
 async def checkout_loan(
     loan_id: int, 
