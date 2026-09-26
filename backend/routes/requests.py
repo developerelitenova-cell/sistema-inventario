@@ -74,7 +74,8 @@ def get_asset_requests(
     if current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
         allowed = auth_service.visible_warehouse_keys(current_user)
         if allowed is not None:
-            query = query.filter(models.AssetRequest.module.in_(allowed))
+            from sqlalchemy import or_
+            query = query.filter(or_(models.AssetRequest.module.in_(allowed), models.AssetRequest.module == None))
 
     return query.order_by(models.AssetRequest.created_at.desc()).all()
 
