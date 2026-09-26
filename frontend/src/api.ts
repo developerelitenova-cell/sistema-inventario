@@ -353,6 +353,7 @@ export const deleteUser = (userId: number) =>
 export const getRolePermissions = () => request<RolePermission[]>('/role-permissions/');
 
 export const getWarehouses = () => request<Warehouse[]>('/warehouses/');
+export const getPublicWarehouses = () => request<Warehouse[]>('/warehouses/public');
 
 export const createWarehouse = (payload: { key: string; name: string }) =>
   request<Warehouse>('/warehouses/', { method: 'POST', body: JSON.stringify(payload) });

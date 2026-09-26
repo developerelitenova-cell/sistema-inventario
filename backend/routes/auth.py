@@ -71,6 +71,12 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
             role=models.RoleEnum.EMPLEADO,
             password_hash=password_hash,
         )
+        
+        if payload.warehouse_key:
+            warehouse = db.query(models.Warehouse).filter(models.Warehouse.key == payload.warehouse_key).first()
+            if warehouse:
+                user.warehouses.append(warehouse)
+                
         db.add(user)
 
     db.commit()

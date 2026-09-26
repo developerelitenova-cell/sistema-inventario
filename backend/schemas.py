@@ -57,6 +57,7 @@ class RegisterRequest(BaseModel):
     photo_url: Optional[str] = None
     additional_photos: Optional[List[str]] = []
     digital_signature_url: Optional[str] = None
+    warehouse_key: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str

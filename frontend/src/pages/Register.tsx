@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Check, Pencil, Copy } from "lucide-react";
-import { registerUser } from "../api";
+import { registerUser, getPublicWarehouses, type Warehouse } from "../api";
 import { setToken } from "../session";
 import CameraCapture from "../components/CameraCapture";
 
@@ -11,12 +11,18 @@ export default function Register() {
     full_name: "",
     document_id: "",
     email: "",
+    warehouse_key: "",
   });
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [photo, setPhoto] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    getPublicWarehouses().then(setWarehouses).catch(console.error);
+  }, []);
 
   // Signature state
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,6 +101,7 @@ export default function Register() {
         email: formData.email,
         photo_url: photo,
         digital_signature_url: finalSignature ?? undefined,
+        warehouse_key: formData.warehouse_key || undefined,
       });
       setToken(res.token);
       setGeneratedPassword(res.generated_password);
@@ -175,6 +182,20 @@ export default function Register() {
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Empresa a la que perteneces</label>
+              <select
+                required
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                value={formData.warehouse_key}
+                onChange={e => setFormData({...formData, warehouse_key: e.target.value})}
+              >
+                <option value="">-- Seleccionar Empresa --</option>
+                {warehouses.map(w => (
+                  <option key={w.key} value={w.key}>{w.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 

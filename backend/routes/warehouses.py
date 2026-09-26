@@ -17,6 +17,11 @@ def _slugify_key(name: str) -> str:
     return slug or "bodega"
 
 
+@router.get("/public", response_model=List[schemas.Warehouse])
+def get_public_warehouses(db: Session = Depends(get_db)):
+    return db.query(models.Warehouse).order_by(models.Warehouse.name).all()
+
+
 @router.get("/", response_model=List[schemas.Warehouse])
 def get_warehouses(
     db: Session = Depends(get_db),
