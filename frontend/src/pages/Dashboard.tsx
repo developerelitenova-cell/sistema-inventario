@@ -85,6 +85,11 @@ const EmployeeRequestView = () => {
           <h1 className="title">Panel de Usuario</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
             Gestioná tus solicitudes, activos a cargo y revisá tu historial.
+            {currentUser?.warehouses && currentUser.warehouses.length > 0 && currentUser.role === 'empleado' && (
+              <span style={{ marginLeft: '12px', fontWeight: 600, color: 'var(--primary)', background: 'var(--surface-color)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                🏢 Empresa: {currentUser.warehouses[0].name}
+              </span>
+            )}
           </p>
         </div>
       </div>

@@ -260,6 +260,11 @@ const Navbar = () => {
       {/* User action buttons for desktop */}
       {currentUser && (
         <div className="hidden md:flex items-center gap-2 ml-4">
+          {currentUser.warehouses && currentUser.warehouses.length > 0 && currentUser.role === 'empleado' && (
+            <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap">
+              🏢 {currentUser.warehouses[0].name}
+            </span>
+          )}
           <button
             onClick={() => setShowPasswordModal(true)}
             title="Cambiar contraseña"
