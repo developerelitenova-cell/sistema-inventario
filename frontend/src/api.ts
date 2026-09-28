@@ -192,6 +192,7 @@ export const registerUser = (payload: {
   email: string;
   photo_url?: string;
   digital_signature_url?: string;
+  warehouse_key?: string;
 }) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
 
 export const login = (email: string, password: string) =>
@@ -425,6 +426,7 @@ export interface Assignment {
   status: AssignmentStatus;
   notes: string | null;
   security_authorization: string | null;
+  is_accepted: boolean;
   asset: Asset;
   user: User;
   authorized_by: User | null;
