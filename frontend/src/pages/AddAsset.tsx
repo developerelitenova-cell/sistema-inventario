@@ -186,7 +186,7 @@ const AddAsset = () => {
               .qr { width: 1.2cm; height: 1.2cm; flex-shrink: 0; display: block; }
             </style>
           </head>
-          <body onload="window.print(); window.close();">
+          <body onload="setTimeout(function(){ window.print(); window.close(); }, 250);">
             <div class="left">
               <img class="logo" src="${logoSrc}" alt="logo" />
               <div class="divider">
@@ -200,6 +200,8 @@ const AddAsset = () => {
         </html>
       `);
       printWindow.document.close();
+    } else {
+      alert("Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para poder imprimir el QR.");
     }
   };
 

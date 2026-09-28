@@ -200,18 +200,20 @@ const Navbar = () => {
       {/* Navigation Links - horizontally scrollable on mobile & desktop */}
       <div className="relative flex-1 min-w-0 flex items-center overflow-hidden rounded-xl">
         {/* Left fade indicator */}
-        <div 
-          className={`absolute left-0 top-0 bottom-0 w-8 md:w-12 pointer-events-none z-10 flex items-center justify-start transition-opacity duration-300 bg-gradient-to-r from-[rgba(255,255,255,0.95)] to-transparent ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
+        <button 
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+          className={`absolute left-0 top-0 bottom-0 w-8 md:w-12 z-10 flex items-center justify-start transition-opacity duration-300 bg-gradient-to-r from-[rgba(255,255,255,0.95)] to-transparent cursor-pointer border-none outline-none ${canScrollLeft ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         >
           <ChevronLeft className="w-4 h-4 text-slate-500 ml-0.5" />
-        </div>
+        </button>
 
         {/* Right fade indicator */}
-        <div 
-          className={`absolute right-0 top-0 bottom-0 w-8 md:w-12 pointer-events-none z-10 flex items-center justify-end transition-opacity duration-300 bg-gradient-to-l from-[rgba(255,255,255,0.95)] to-transparent ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
+        <button 
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+          className={`absolute right-0 top-0 bottom-0 w-8 md:w-12 z-10 flex items-center justify-end transition-opacity duration-300 bg-gradient-to-l from-[rgba(255,255,255,0.95)] to-transparent cursor-pointer border-none outline-none ${canScrollRight ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         >
           <ChevronRight className="w-5 h-5 text-slate-600 mr-0.5 animate-pulse" />
-        </div>
+        </button>
 
         <div 
           ref={scrollContainerRef}
