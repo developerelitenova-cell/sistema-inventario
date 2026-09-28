@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import { getAssetRequests, isMasterAdmin, logoutApi } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 import logoIcon from '../assets/logo_elite_nova.png';
 import ChangePasswordModal from './ChangePasswordModal';
 
 const Navbar = () => {
   const location = useLocation();
   const currentUser = getCachedUser();
-  const { module } = useModule();
+  const { module, setModule } = useModule();
+  const { warehouses } = useWarehouses();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -264,6 +267,36 @@ const Navbar = () => {
             <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap">
               🏢 {currentUser.warehouses[0].name}
             </span>
+          )}
+          {currentUser.role !== 'empleado' && (
+            <div className="relative">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-3 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
+              >
+                🏢 {warehouses.find(w => w.key === module)?.name || 'Módulo'} <ChevronDown size={14} />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
+                  {warehouses.filter(w => w.is_active).map(w => (
+                    <button
+                      key={w.key}
+                      onClick={() => { setModule(w.key); setIsDropdownOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${module === w.key ? 'bg-[var(--gold)] text-white font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      {w.name}
+                    </button>
+                  ))}
+                  {isMasterAdmin(currentUser) && (
+                    <div className="border-t border-gray-100">
+                      <Link to="/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2.5 text-xs text-center text-[var(--gold-deep)] hover:bg-gray-50 font-semibold transition-colors">
+                        Gestión de Bodegas
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           <button
             onClick={() => setShowPasswordModal(true)}

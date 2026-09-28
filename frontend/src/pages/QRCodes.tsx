@@ -32,6 +32,22 @@ const QRCodes = () => {
   const [generating, setGenerating] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
 
+  const currentUser = import('../components/LoginGate').then(m => m.getCachedUser());
+  const [allowedWarehouses, setAllowedWarehouses] = useState(warehouses);
+
+  useEffect(() => {
+    import('../components/LoginGate').then(m => {
+      const user = m.getCachedUser();
+      const isEncargado = user?.role?.toLowerCase() === 'encargado';
+      let visible = warehouses.filter((w) => w.is_active);
+      if (isEncargado && user?.warehouses) {
+        const allowedKeys = user.warehouses.map(w => w.key);
+        visible = visible.filter(w => allowedKeys.includes(w.key));
+      }
+      setAllowedWarehouses(visible);
+    });
+  }, [warehouses]);
+
   useEffect(() => {
     setLoading(true);
     getAssets(module)
@@ -97,7 +113,7 @@ const QRCodes = () => {
               }}
             >
               <option value="">Seleccione un módulo</option>
-              {warehouses.map((w) => (
+              {allowedWarehouses.map((w) => (
                 <option key={w.key} value={w.key}>{w.name}</option>
               ))}
             </select>

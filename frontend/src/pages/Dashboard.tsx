@@ -38,8 +38,8 @@ const EmployeeRequestView = () => {
     setLoading(true);
     Promise.all([
       getMyAssetRequests().then(setMyRequests),
-      getLoans().then(setLoans),
-      getAssignments().then(setAssignments)
+      getLoans().then(data => setLoans(data.filter(l => l.status !== 'returned' && l.status !== 'rejected'))),
+      getAssignments().then(data => setAssignments(data.filter(a => a.status !== 'revoked')))
     ])
     .catch((err) => setError(err.message))
     .finally(() => setLoading(false));

@@ -39,7 +39,11 @@ const RegisterByCode = () => {
 
     scanner.render(
       (decodedText) => {
-        scanner.pause(true);
+        try {
+          scanner.pause(true);
+        } catch (e) {
+          console.warn("Could not pause scanner", e);
+        }
         lookupCode(decodedText);
       },
       () => {

@@ -30,7 +30,6 @@ function AppShell() {
     <div className="app-layout">
       <Navbar />
       <main className="page-container">
-        {!isEmpleado && <ModuleSelector />}
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />

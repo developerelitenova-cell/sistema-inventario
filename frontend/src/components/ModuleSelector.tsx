@@ -22,7 +22,13 @@ export default function ModuleSelector({ disabled }: ModuleSelectorProps) {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const visible = warehouses.filter((w) => w.is_active);
+  const isEncargado = currentUser?.role?.toLowerCase() === 'encargado';
+
+  let visible = warehouses.filter((w) => w.is_active);
+  if (isEncargado && currentUser?.warehouses) {
+    const allowedKeys = currentUser.warehouses.map(w => w.key);
+    visible = visible.filter(w => allowedKeys.includes(w.key));
+  }
 
   useEffect(() => {
     if (visible.length && !visible.some((w) => w.key === module)) {

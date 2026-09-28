@@ -23,7 +23,11 @@ const Scanner = () => {
     scanner.render(
       (decodedText) => {
         setScanResult(decodedText);
-        scanner.pause(true);
+        try {
+          scanner.pause(true);
+        } catch (e) {
+          console.warn("Could not pause scanner", e);
+        }
         handleVerify(decodedText);
       },
       () => {

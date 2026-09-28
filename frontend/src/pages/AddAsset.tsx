@@ -24,6 +24,25 @@ const AddAsset = () => {
   });
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
 
+  const currentUser = import('../components/LoginGate').then(m => m.getCachedUser());
+  const [allowedWarehouses, setAllowedWarehouses] = useState(warehouses);
+
+  useEffect(() => {
+    import('../components/LoginGate').then(m => {
+      const user = m.getCachedUser();
+      const isEncargado = user?.role?.toLowerCase() === 'encargado';
+      let visible = warehouses.filter((w) => w.is_active);
+      if (isEncargado && user?.warehouses) {
+        const allowedKeys = user.warehouses.map(w => w.key);
+        visible = visible.filter(w => allowedKeys.includes(w.key));
+      }
+      setAllowedWarehouses(visible);
+      if (visible.length > 0 && !visible.some(w => w.key === assetModule)) {
+        setAssetModule(visible[0].key);
+      }
+    });
+  }, [warehouses, assetModule]);
+
   // Mantener el área dentro de las opciones válidas de la bodega elegida
   // (cambia cuando cambia de bodega, y arranca con la primera por defecto).
   useEffect(() => {
@@ -232,7 +251,7 @@ const AddAsset = () => {
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Módulo</div>
             <select className="input-field" value={assetModule} onChange={(e) => setAssetModule(e.target.value as Module)}>
-              {warehouses.map((w) => (
+              {allowedWarehouses.map((w) => (
                 <option key={w.key} value={w.key}>{w.name}</option>
               ))}
             </select>
