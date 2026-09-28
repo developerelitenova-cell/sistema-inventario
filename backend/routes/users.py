@@ -165,12 +165,28 @@ def delete_user(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # Borrado en cascada de entidades pertenecientes al usuario
+
+    # 1. Obtener los IDs de las solicitudes del usuario para borrar sus comentarios primero
+    user_requests = db.query(models.AssetRequest.id).filter(models.AssetRequest.requester_id == user.id).all()
+    user_request_ids = [r[0] for r in user_requests]
+    if user_request_ids:
+        db.query(models.RequestComment).filter(models.RequestComment.asset_request_id.in_(user_request_ids)).delete(synchronize_session=False)
+
+    # 2. Obtener los IDs de los préstamos del usuario para desenlazar AssetRequests que apunten a ellos
+    user_loans = db.query(models.Loan.id).filter(models.Loan.borrower_id == user.id).all()
+    user_loan_ids = [l[0] for l in user_loans]
+    if user_loan_ids:
+        db.query(models.AssetRequest).filter(models.AssetRequest.resulting_loan_id.in_(user_loan_ids)).update({models.AssetRequest.resulting_loan_id: None}, synchronize_session=False)
+
+    # 3. Borrar los comentarios donde el usuario fue el autor
     db.query(models.RequestComment).filter(models.RequestComment.author_id == user.id).delete(synchronize_session=False)
+    
+    # 4. Borrar entidades base
     db.query(models.AssetRequest).filter(models.AssetRequest.requester_id == user.id).delete(synchronize_session=False)
     db.query(models.Loan).filter(models.Loan.borrower_id == user.id).delete(synchronize_session=False)
     db.query(models.AssetAssignment).filter(models.AssetAssignment.user_id == user.id).delete(synchronize_session=False)
 
-    # Limpiar referencias donde el usuario actuó como admin o aprobador (poner en NULL)
+    # 5. Limpiar referencias donde el usuario actuó como admin o aprobador (poner en NULL)
     db.query(models.Loan).filter(models.Loan.approver_id == user.id).update({models.Loan.approver_id: None}, synchronize_session=False)
     db.query(models.AssetRequest).filter(models.AssetRequest.reviewed_by_id == user.id).update({models.AssetRequest.reviewed_by_id: None}, synchronize_session=False)
     db.query(models.AssetAssignment).filter(models.AssetAssignment.authorized_by_id == user.id).update({models.AssetAssignment.authorized_by_id: None}, synchronize_session=False)
