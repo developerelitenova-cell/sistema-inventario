@@ -222,7 +222,7 @@ const Navbar = () => {
           onMouseLeave={handleMouseLeave}
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
-          className={`flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-1 min-w-0 items-center px-2 hide-scrollbar ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`flex gap-2 overflow-x-auto pb-2 md:pb-0 flex-1 min-w-0 items-center px-8 md:px-10 hide-scrollbar ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
         {navItems.map((item) => {
