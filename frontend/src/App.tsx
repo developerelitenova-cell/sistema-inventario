@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import LoginGate, { getCachedUser } from './components/LoginGate';
+import LoginGate from './components/LoginGate';
 import { ModuleProvider } from './moduleContext';
 import { WarehouseProvider } from './warehouseContext';
 import Dashboard from './pages/Dashboard';
@@ -19,12 +19,11 @@ import RegisterByCode from './pages/RegisterByCode';
 import QRCodes from './pages/QRCodes';
 import ActivityLogs from './pages/ActivityLogs';
 import Accounting from './pages/Accounting';
-import ModuleSelector from './components/ModuleSelector';
+
 import './index.css';
 
 function AppShell() {
-  const currentUser = getCachedUser();
-  const isEmpleado = currentUser?.role === 'empleado';
+
 
   return (
     <div className="app-layout">

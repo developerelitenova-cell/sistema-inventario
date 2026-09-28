@@ -24,7 +24,7 @@ const AddAsset = () => {
   });
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
 
-  const currentUser = import('../components/LoginGate').then(m => m.getCachedUser());
+
   const [allowedWarehouses, setAllowedWarehouses] = useState(warehouses);
 
   useEffect(() => {

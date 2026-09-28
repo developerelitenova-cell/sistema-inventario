@@ -32,7 +32,7 @@ const QRCodes = () => {
   const [generating, setGenerating] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
 
-  const currentUser = import('../components/LoginGate').then(m => m.getCachedUser());
+
   const [allowedWarehouses, setAllowedWarehouses] = useState(warehouses);
 
   useEffect(() => {
