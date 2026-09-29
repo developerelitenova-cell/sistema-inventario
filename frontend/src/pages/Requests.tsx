@@ -26,7 +26,7 @@ const Requests = () => {
     setLoading(true);
     Promise.all([getAssetRequests('pending'), getAssets(module), getAssets()])
       .then(([reqs, assets, allAssets]) => {
-        setRequests(reqs.filter(r => r.module === module || r.module === null));
+        setRequests(reqs);
         setAvailableAssets(assets.filter(a => a.status === 'available'));
         setBusyAssets(allAssets.filter(a => a.status === 'assigned' || a.status === 'loaned'));
       })

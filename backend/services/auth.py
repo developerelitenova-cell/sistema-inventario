@@ -1,6 +1,7 @@
 from time_util import get_colombia_time
 import secrets
 import hashlib
+import enum
 from datetime import datetime, timedelta
 from typing import Optional, List
 
@@ -61,7 +62,9 @@ def get_current_user(
 
 def require_role(*roles: "models.RoleEnum"):
     def dependency(current_user: "models.User" = Depends(get_current_user)) -> "models.User":
-        if current_user.role not in roles:
+        allowed_values = {r.value if isinstance(r, enum.Enum) else r for r in roles}
+        current_val = current_user.role.value if isinstance(current_user.role, enum.Enum) else current_user.role
+        if current_val not in allowed_values:
             raise HTTPException(status_code=403, detail="No tenés permiso para esta acción")
         return current_user
 
@@ -91,7 +94,8 @@ def is_master_admin(user: "models.User") -> bool:
     """Admin maestro = rol admin sin bodegas asignadas (ve/gestiona todo).
     Un admin CON bodegas asignadas queda acotado a esas bodegas, igual que
     un encargado, pero conserva las acciones de nivel admin dentro de ellas."""
-    return user.role == models.RoleEnum.ADMIN and not user.warehouses
+    current_val = user.role.value if isinstance(user.role, enum.Enum) else user.role
+    return current_val == models.RoleEnum.ADMIN.value and not user.warehouses
 
 
 def require_master_admin():

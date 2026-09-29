@@ -25,7 +25,7 @@ const Assignments = () => {
     setLoading(true);
     Promise.all([getAssignments('active'), getAssets(module), getUsers()])
       .then(([a, assets, u]) => {
-        setAssignments(a.filter(x => x.asset.module === module));
+        setAssignments(a);
         setAvailableAssets(assets.filter(x => x.status === 'available'));
         setUsers(u);
       })

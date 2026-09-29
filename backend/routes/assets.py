@@ -163,7 +163,7 @@ def get_assets(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.get_current_user),
 ):
-    if current_user.role == models.RoleEnum.EMPLEADO:
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.EMPLEADO.value:
         raise HTTPException(status_code=403, detail="Los empleados no tienen acceso al catálogo de activos")
     if module and not auth_service.can_access_warehouse(current_user, module):
         raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")

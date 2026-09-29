@@ -19,7 +19,7 @@ const Approvals = () => {
   const load = () => {
     setLoading(true);
     getLoans()
-      .then((loanData) => setLoans(loanData.filter(l => l.asset.module === module)))
+      .then((loanData) => setLoans(loanData))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };

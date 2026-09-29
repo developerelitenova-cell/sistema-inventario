@@ -15,7 +15,7 @@ router = APIRouter(prefix="/asset-requests", tags=["Solicitudes de Activos"])
 def _can_access_asset_request(current_user: "models.User", asset_request: "models.AssetRequest") -> bool:
     if current_user.id == asset_request.requester_id:
         return True
-    if current_user.role in (models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO) and auth_service.can_access_warehouse(current_user, asset_request.module):
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ADMIN.value, models.RoleEnum.ENCARGADO.value) and auth_service.can_access_warehouse(current_user, asset_request.module):
         return True
     return False
 
@@ -75,7 +75,7 @@ def get_asset_requests(
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de solicitud inválido")
 
-    if current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ENCARGADO.value, models.RoleEnum.ADMIN.value):
         allowed = auth_service.visible_warehouse_keys(current_user)
         if allowed is not None:
             from sqlalchemy import or_

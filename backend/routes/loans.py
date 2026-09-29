@@ -33,9 +33,9 @@ def get_loans(
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de préstamo inválido")
 
-    if current_user.role == models.RoleEnum.EMPLEADO:
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.EMPLEADO.value:
         query = query.filter(models.Loan.borrower_id == current_user.id)
-    elif current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+    elif (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ENCARGADO.value, models.RoleEnum.ADMIN.value):
         allowed = auth_service.visible_warehouse_keys(current_user)
         if allowed is not None:
             query = query.join(models.Asset).filter(models.Asset.module.in_(allowed))
@@ -53,9 +53,9 @@ def get_loan(
     if not loan:
         raise HTTPException(status_code=404, detail="Préstamo no encontrado")
         
-    if current_user.role == models.RoleEnum.EMPLEADO and loan.borrower_id != current_user.id:
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.EMPLEADO.value and loan.borrower_id != current_user.id:
         raise HTTPException(status_code=403, detail="No podés ver préstamos de otros usuarios")
-    elif current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+    elif (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ENCARGADO.value, models.RoleEnum.ADMIN.value):
         if not auth_service.can_access_warehouse(current_user, loan.asset.module):
             raise HTTPException(status_code=403, detail="No podés ver préstamos de esta bodega")
             
@@ -260,7 +260,7 @@ def return_loan(
     if not loan or loan.status not in [models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED]:
         raise HTTPException(status_code=400, detail="Préstamo no válido para devolución")
 
-    if current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN) and not auth_service.can_access_warehouse(current_user, loan.asset.module):
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ENCARGADO.value, models.RoleEnum.ADMIN.value) and not auth_service.can_access_warehouse(current_user, loan.asset.module):
         raise HTTPException(status_code=403, detail="No tiene permisos para devolver activos de este módulo")
 
     loan.status = models.LoanStatusEnum.RETURNED
@@ -298,7 +298,7 @@ def return_asset(
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
 
-    if current_user.role == models.RoleEnum.ENCARGADO and not auth_service.can_access_warehouse(current_user, asset.module):
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.ENCARGADO.value and not auth_service.can_access_warehouse(current_user, asset.module):
         raise HTTPException(status_code=403, detail="No tiene permisos para devolver activos de este módulo")
 
     loan = db.query(models.Loan).filter(

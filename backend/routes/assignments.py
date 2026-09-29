@@ -36,9 +36,9 @@ def get_assignments(
         except ValueError:
             raise HTTPException(status_code=400, detail="Estado de asignación inválido")
     
-    if current_user.role == models.RoleEnum.EMPLEADO:
+    if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.EMPLEADO.value:
         query = query.filter(models.AssetAssignment.user_id == current_user.id)
-    elif current_user.role in (models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN):
+    elif (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) in (models.RoleEnum.ENCARGADO.value, models.RoleEnum.ADMIN.value):
         allowed = auth_service.visible_warehouse_keys(current_user)
         if allowed is not None:
             query = query.join(models.Asset).filter(models.Asset.module.in_(allowed))
