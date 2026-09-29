@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Package, QrCode, ClipboardCheck, AlertTriangle, UserCheck, Contact, LogOut, Users as UsersIcon, Inbox, PlusCircle, Grid3x3, ScrollText, PackageCheck, ScanLine, Calculator, MessageCircle, X, KeyRound, ChevronLeft, ChevronRight, ChevronDown, Building2 } from 'lucide-react';
 import { getCachedUser } from './LoginGate';
 import { clearToken } from '../session';
 import { getAssetRequests, isMasterAdmin, logoutApi } from '../api';
@@ -135,6 +135,7 @@ const Navbar = () => {
     { path: '/responsibles', label: 'Personal', icon: Contact, show: isAdmin },
     { path: '/accounting', label: 'Contabilidad', icon: Calculator, show: isMaster },
     { path: '/users', label: 'Usuarios', icon: UsersIcon, show: isAdmin },
+    { path: '/warehouses', label: 'Bodegas', icon: Building2, show: isMaster },
     { path: '/logs', label: 'Logs', icon: ScrollText, show: isMaster },
   ].filter(item => item.show);
 

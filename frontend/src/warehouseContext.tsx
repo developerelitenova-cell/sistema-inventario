@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { getWarehouses, type Warehouse } from './api';
+import { getWarehouses, type Warehouse, isMasterAdmin } from './api';
+import { getCachedUser } from './components/LoginGate';
 
 interface WarehouseContextValue {
   warehouses: Warehouse[];
@@ -24,10 +25,15 @@ export const WarehouseProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(load, []);
 
+  const user = getCachedUser();
+  const filteredWarehouses = isMasterAdmin(user) 
+    ? warehouses 
+    : warehouses.filter(w => user?.warehouses.some(uw => uw.id === w.id));
+
   const labels = Object.fromEntries(warehouses.map((w) => [w.key, w.name]));
 
   return (
-    <WarehouseContext.Provider value={{ warehouses, labels, loading, reload: load }}>
+    <WarehouseContext.Provider value={{ warehouses: filteredWarehouses, labels, loading, reload: load }}>
       {children}
     </WarehouseContext.Provider>
   );

@@ -19,6 +19,7 @@ import RegisterByCode from './pages/RegisterByCode';
 import QRCodes from './pages/QRCodes';
 import ActivityLogs from './pages/ActivityLogs';
 import Accounting from './pages/Accounting';
+import Warehouses from './pages/Warehouses';
 
 import './index.css';
 
@@ -44,6 +45,7 @@ function AppShell() {
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/responsibles" element={<Responsibles />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/warehouses" element={<Warehouses />} />
           <Route path="/logs" element={<ActivityLogs />} />
           <Route path="/security-exit/:id" element={<SecurityExitPass />} />
         </Routes>
