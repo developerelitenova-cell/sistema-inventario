@@ -87,7 +87,7 @@ export default function SecurityExitPass() {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <div className="liquid-glass p-6 md:p-10 rounded-2xl relative overflow-hidden">
+      <div className="bg-white shadow-xl border border-gray-100 p-6 md:p-10 rounded-2xl relative overflow-hidden">
         {isCheckedOut && (
           <div className="absolute top-0 right-0 bg-green-500 text-white px-8 py-2 rounded-bl-2xl font-bold uppercase tracking-wider flex items-center shadow-lg">
             <CheckCircle className="w-5 h-5 mr-2" /> Salida Completada
@@ -95,70 +95,70 @@ export default function SecurityExitPass() {
         )}
 
         <div className="flex items-center justify-center mb-8">
-          <Shield className="w-10 h-10 text-[var(--gold-light)] mr-3" />
-          <h1 className="text-3xl font-bold text-white uppercase tracking-wider">Pase de Salida Oficial</h1>
+          <Shield className="w-10 h-10 text-[var(--gold)] mr-3" />
+          <h1 className="text-3xl font-bold text-[var(--primary)] uppercase tracking-wider">Pase de Salida Oficial</h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Columna Empleado */}
-          <div className="bg-[rgba(0,0,0,0.3)] p-6 rounded-xl border border-[rgba(255,255,255,0.1)]">
-            <h2 className="text-xl font-bold text-gray-300 mb-4 border-b border-gray-700 pb-2">Datos del Empleado</h2>
+          <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+            <h2 className="text-xl font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2">Datos del Empleado</h2>
             
             <div className="flex flex-col items-center mb-6">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--gold)] shadow-xl mb-4 bg-gray-800">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[var(--gold)] shadow-xl mb-4 bg-white">
                 {(loan.borrower as any).photo_url ? (
                   <img src={(loan.borrower as any).photo_url} alt="Foto Empleado" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">Sin foto</div>
+                  <div className="flex items-center justify-center h-full text-slate-400 text-sm">Sin foto</div>
                 )}
               </div>
-              <h3 className="text-2xl font-bold text-white text-center">{loan.borrower.full_name}</h3>
-              <p className="text-[var(--gold-light)]">C.C. {loan.borrower.document_id}</p>
+              <h3 className="text-2xl font-bold text-slate-800 text-center">{loan.borrower.full_name}</h3>
+              <p className="text-[var(--gold)]">C.C. {loan.borrower.document_id}</p>
             </div>
 
-            <div className="bg-white p-2 rounded-lg mt-4 h-32 flex items-center justify-center relative">
-              <span className="absolute top-2 left-2 text-xs text-gray-400 font-bold">Firma del Solicitante</span>
+            <div className="bg-white p-2 rounded-lg mt-4 h-32 flex items-center justify-center relative shadow-sm border border-slate-100">
+              <span className="absolute top-2 left-2 text-xs text-slate-400 font-bold">Firma del Solicitante</span>
               {(loan.borrower as any).digital_signature_url ? (
                 <img src={(loan.borrower as any).digital_signature_url} alt="Firma Empleado" className="max-h-full max-w-full object-contain mix-blend-multiply" />
               ) : (
-                <div className="text-gray-400 italic">No hay firma registrada</div>
+                <div className="text-slate-400 italic">No hay firma registrada</div>
               )}
             </div>
           </div>
 
           {/* Columna Activo */}
-          <div className="bg-[rgba(0,0,0,0.3)] p-6 rounded-xl border border-[rgba(255,255,255,0.1)] flex flex-col">
-            <h2 className="text-xl font-bold text-gray-300 mb-4 border-b border-gray-700 pb-2">Datos del Activo</h2>
+          <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col">
+            <h2 className="text-xl font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2">Datos del Activo</h2>
             
             <div className="flex-1 space-y-4">
               <div>
-                <p className="text-sm text-gray-400">Código Único</p>
-                <p className="text-xl font-mono text-white bg-black/40 px-3 py-1 rounded inline-block mt-1">
+                <p className="text-sm text-slate-500">Código Único</p>
+                <p className="text-xl font-mono text-slate-800 bg-slate-200 px-3 py-1 rounded inline-block mt-1 font-bold">
                   {loan.asset.unique_code}
                 </p>
               </div>
               
               <div>
-                <p className="text-sm text-gray-400">Descripción</p>
-                <p className="text-lg text-white">{loan.asset.description}</p>
+                <p className="text-sm text-slate-500">Descripción</p>
+                <p className="text-lg text-slate-800 font-medium">{loan.asset.description}</p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-400">Marca / Modelo</p>
-                <p className="text-white">{loan.asset.brand_model}</p>
+                <p className="text-sm text-slate-500">Marca / Modelo</p>
+                <p className="text-slate-800">{loan.asset.brand_model}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-400">Fecha Solicitud</p>
-                  <p className="text-white">{new Date(loan.request_date).toLocaleDateString()}</p>
+                  <p className="text-sm text-slate-500">Fecha Solicitud</p>
+                  <p className="text-slate-800">{new Date(loan.request_date).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Estado Préstamo</p>
+                  <p className="text-sm text-slate-500">Estado Préstamo</p>
                   <span className={`px-3 py-1 rounded-full text-sm font-bold mt-1 inline-block ${
-                    loan.status === 'approved' ? 'bg-[rgba(176,141,87,0.25)] text-[var(--gold-light)] border border-[var(--gold)]' :
-                    loan.status === 'checked_out' ? 'bg-green-900/50 text-green-300 border border-green-500' :
-                    'bg-gray-800 text-gray-300'
+                    loan.status === 'approved' ? 'bg-[#fdf9f1] text-[var(--gold)] border border-[var(--gold)]' :
+                    loan.status === 'checked_out' ? 'bg-green-50 text-green-700 border border-green-300' :
+                    'bg-slate-100 text-slate-600 border border-slate-300'
                   }`}>
                     {loan.status.toUpperCase()}
                   </span>
@@ -166,11 +166,11 @@ export default function SecurityExitPass() {
               </div>
 
               <div>
-                <p className="text-sm text-gray-400">Accesorios (Confirmar salida)</p>
+                <p className="text-sm text-slate-500">Accesorios (Confirmar salida)</p>
                 {loan.asset.accessories && loan.asset.accessories.length > 0 ? (
-                  <ul className="mt-2 space-y-2 bg-black/20 p-3 rounded">
+                  <ul className="mt-2 space-y-2 bg-white border border-slate-200 p-3 rounded shadow-sm">
                     {loan.asset.accessories.map((acc, i) => (
-                      <li key={i} className="flex items-center text-white">
+                      <li key={i} className="flex items-center text-slate-800">
                         <input 
                           type="checkbox" 
                           className="mr-3 w-5 h-5 accent-[var(--gold)]"
@@ -183,21 +183,21 @@ export default function SecurityExitPass() {
                           }}
                           disabled={isCheckedOut}
                         />
-                        <span className={!selectedAccessories[i] && !isCheckedOut ? "line-through text-gray-500" : ""}>
+                        <span className={!selectedAccessories[i] && !isCheckedOut ? "line-through text-slate-400" : "font-medium"}>
                           {acc.name} {acc.is_linked_asset && acc.linked_asset_code ? `(QR: ${acc.linked_asset_code})` : ''}
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-400 mt-1 italic">El activo no tiene accesorios registrados.</p>
+                  <p className="text-slate-500 mt-1 italic">El activo no tiene accesorios registrados.</p>
                 )}
               </div>
 
               <div>
-                <p className="text-sm text-gray-400">Autorización de Salida</p>
+                <p className="text-sm text-slate-500">Autorización de Salida</p>
                 <span className={`px-3 py-1 rounded-full text-sm font-bold mt-1 inline-block ${
-                  requiresExitPass ? 'bg-green-900/50 text-green-300 border border-green-500' : 'bg-gray-800 text-gray-300 border border-gray-600'
+                  requiresExitPass ? 'bg-green-50 text-green-700 border border-green-300' : 'bg-slate-100 text-slate-600 border border-slate-300'
                 }`}>
                   {requiresExitPass ? 'AUTORIZADO A SALIR' : 'USO INTERNO — SIN SALIDA'}
                 </span>
@@ -208,23 +208,23 @@ export default function SecurityExitPass() {
 
         {/* Zona de Validación Pentágono */}
         {!isCheckedOut && loan.status === 'approved' && !requiresExitPass && (
-          <div className="mt-8 border-t border-gray-700 pt-8 text-center">
-            <p className="text-gray-400">
-              Este préstamo es de <strong className="text-white">uso interno</strong>: no tiene autorización de salida, así que no requiere pase de seguridad.
+          <div className="mt-8 border-t border-slate-200 pt-8 text-center">
+            <p className="text-slate-600">
+              Este préstamo es de <strong className="text-slate-800">uso interno</strong>: no tiene autorización de salida, así que no requiere pase de seguridad.
             </p>
           </div>
         )}
 
         {!isCheckedOut && loan.status === 'approved' && requiresExitPass && (
-          <div className="mt-8 border-t border-gray-700 pt-8">
-            <h2 className="text-2xl font-bold text-center text-white mb-6 flex items-center justify-center">
+          <div className="mt-8 border-t border-slate-200 pt-8">
+            <h2 className="text-2xl font-bold text-center text-[var(--primary)] mb-6 flex items-center justify-center">
               <Shield className="w-6 h-6 mr-2 text-[var(--gold)]" />
               Validación de Seguridad (Pentágono)
             </h2>
             
             <div className="max-w-md mx-auto">
-              <div className="bg-white rounded-xl overflow-hidden mb-4 relative" style={{ height: '200px' }}>
-                <span className="absolute top-2 left-2 text-xs text-gray-400 font-bold pointer-events-none">Firma Guardia en Turno</span>
+              <div className="bg-white border border-slate-200 shadow-inner rounded-xl overflow-hidden mb-4 relative" style={{ height: '200px' }}>
+                <span className="absolute top-2 left-2 text-xs text-slate-400 font-bold pointer-events-none">Firma Guardia en Turno</span>
                 <canvas 
                   ref={canvasRef}
                   width={400}
