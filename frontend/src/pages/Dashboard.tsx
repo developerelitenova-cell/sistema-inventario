@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles, Building2, Car, Package, QrCode, ArrowRight } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
-  createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
+  createAssetRequest, getMyAssetRequests, getAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
   getLoans, getAssignments, returnAsset, acceptLoan, acceptAssignment,
   type Asset, type Category, type AssetRequest, type AssetAvailability, type InventoryType,
   type Loan, type Assignment
@@ -308,10 +308,22 @@ const CatalogView = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [module, searchTerm, inventoryType, statusFilter, catalogSection]);
+
+  useEffect(() => {
+    if (canSeeValues) {
+      getAssetRequests('pending')
+        .then(reqs => {
+          const scoped = reqs.filter(r => !module || !r.module || r.module === module);
+          setPendingRequestsCount(scoped.length);
+        })
+        .catch(() => {});
+    }
+  }, [module, canSeeValues]);
 
   const loadAssets = () => {
     if (!module) return;
@@ -427,6 +439,45 @@ const CatalogView = () => {
           Exportar a Excel ({activeItems.length})
         </button>
       </div>
+
+      {/* Alerta visible para administradores y encargados si hay solicitudes pendientes */}
+      {pendingRequestsCount > 0 && (
+        <div
+          className="glass-panel"
+          style={{
+            marginBottom: '20px',
+            padding: '14px 20px',
+            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            borderRadius: '12px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🔔</span>
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                Hay {pendingRequestsCount} solicitud{pendingRequestsCount === 1 ? '' : 'es'} de activos pendiente{pendingRequestsCount === 1 ? '' : 's'} por gestionar
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Los colaboradores de {labels[module] || module} han solicitado equipos o activos para sus funciones.
+              </div>
+            </div>
+          </div>
+          <Link
+            to="/requests"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.88rem', textDecoration: 'none' }}
+          >
+            <span>Gestionar Solicitudes</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
 
       {/* PESTAÑAS PRINCIPALES: Separación radical de Activos vs Códigos Pendientes */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
