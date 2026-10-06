@@ -99,20 +99,28 @@ def get_users(
         return db.query(models.User).order_by(models.User.full_name).all()
 
     own_keys = auth_service.visible_warehouse_keys(current_user) or []
-    from sqlalchemy import or_, not_, exists
-    has_warehouse = exists().where(models.user_warehouses.c.user_id == models.User.id)
+    from sqlalchemy import or_
 
+    # IDs de usuarios asignados a las bodegas administradas por el usuario actual
+    allowed_user_ids = (
+        db.query(models.user_warehouses.c.user_id)
+        .join(models.Warehouse, models.Warehouse.id == models.user_warehouses.c.warehouse_id)
+        .filter(models.Warehouse.key.in_(own_keys))
+    )
+
+    # IDs de usuarios que tienen al menos una bodega vinculada
+    has_any_warehouse_user_ids = db.query(models.user_warehouses.c.user_id)
+
+    # Evitamos SELECT DISTINCT sobre models.User para prevenir el error en PostgreSQL
+    # ("could not identify an equality operator for type json" en additional_photos)
     return (
         db.query(models.User)
-        .outerjoin(models.user_warehouses, models.User.id == models.user_warehouses.c.user_id)
-        .outerjoin(models.Warehouse, models.Warehouse.id == models.user_warehouses.c.warehouse_id)
         .filter(
             or_(
-                models.Warehouse.key.in_(own_keys),
-                not_(has_warehouse),  # Usuarios nuevos o sin bodega son visibles para que el admin pueda gestionarlos
+                models.User.id.in_(allowed_user_ids),
+                ~models.User.id.in_(has_any_warehouse_user_ids),
             )
         )
-        .distinct()
         .order_by(models.User.full_name)
         .all()
     )
