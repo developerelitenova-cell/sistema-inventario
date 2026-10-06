@@ -141,8 +141,30 @@ const Users = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <UserProfileCard
                     user={u}
-                    subtitle={`${ROLE_LABELS[u.role]} · ${u.warehouses.length ? u.warehouses.map(w => w.name).join(', ') : 'todas las bodegas'} · ${u.cargo || 'sin cargo'}`}
+                    subtitle={`${ROLE_LABELS[u.role]} · ${
+                      u.warehouses.length
+                        ? u.warehouses.map((w) => w.name).join(', ')
+                        : u.role === 'admin'
+                        ? 'Acceso Global (Master)'
+                        : '⚠️ Sin bodega asignada'
+                    } · ${u.cargo || 'sin cargo'}`}
                   />
+                  {u.warehouses.length === 0 && u.role !== 'admin' && (
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fcd34d',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ⚠️ Asignar Bodega
+                    </span>
+                  )}
                   {!isActive && (
                     <span
                       style={{

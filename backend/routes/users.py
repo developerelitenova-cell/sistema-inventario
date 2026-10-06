@@ -96,15 +96,24 @@ def get_users(
     current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
     if auth_service.is_master_admin(current_user):
-        return db.query(models.User).all()
+        return db.query(models.User).order_by(models.User.full_name).all()
 
     own_keys = auth_service.visible_warehouse_keys(current_user) or []
+    from sqlalchemy import or_, not_, exists
+    has_warehouse = exists().where(models.user_warehouses.c.user_id == models.User.id)
+
     return (
         db.query(models.User)
-        .join(models.user_warehouses, models.User.id == models.user_warehouses.c.user_id)
-        .join(models.Warehouse, models.Warehouse.id == models.user_warehouses.c.warehouse_id)
-        .filter(models.Warehouse.key.in_(own_keys))
+        .outerjoin(models.user_warehouses, models.User.id == models.user_warehouses.c.user_id)
+        .outerjoin(models.Warehouse, models.Warehouse.id == models.user_warehouses.c.warehouse_id)
+        .filter(
+            or_(
+                models.Warehouse.key.in_(own_keys),
+                not_(has_warehouse),  # Usuarios nuevos o sin bodega son visibles para que el admin pueda gestionarlos
+            )
+        )
         .distinct()
+        .order_by(models.User.full_name)
         .all()
     )
 
@@ -123,8 +132,10 @@ def update_user(
     if not auth_service.is_master_admin(_admin):
         own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
         target_keys = {w.key for w in user.warehouses}
-        if not (own_keys & target_keys):
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        # Si el usuario ya tiene bodegas, debe coincidir al menos una con own_keys.
+        # Si no tiene bodegas asignadas aún, el admin de bodega puede vincularlo a sus bodegas.
+        if target_keys and not (own_keys & target_keys):
+            raise HTTPException(status_code=403, detail="No tenés permisos para gestionar un usuario de otra bodega")
         _assert_scoped_admin_can_assign(
             _admin,
             update.role if update.role is not None else user.role,

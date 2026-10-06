@@ -302,6 +302,44 @@ const Navbar = () => {
               )}
             </div>
           )}
+          {/* Badge del rol del usuario */}
+          {(() => {
+            const role = currentUser.role?.toLowerCase() || 'empleado';
+            const badgeMeta = {
+              admin: { label: 'Admin', icon: '👑', bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
+              encargado: { label: 'Encargado', icon: '🔑', bg: '#e0e7ff', text: '#3730a3', border: '#c7d2fe' },
+              salida: { label: 'Vigilancia', icon: '🛡️', bg: '#f3e8ff', text: '#6b21a8', border: '#e9d5ff' },
+              empleado: { label: 'Empleado', icon: '👤', bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' },
+            }[role] || { label: currentUser.role, icon: '👤', bg: '#f1f5f9', text: '#334155', border: '#cbd5e1' };
+
+            return (
+              <span
+                style={{
+                  backgroundColor: badgeMeta.bg,
+                  color: badgeMeta.text,
+                  border: `1px solid ${badgeMeta.border}`,
+                  padding: '4px 10px',
+                  borderRadius: '10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
+                }}
+                title={currentUser.cargo ? `Cargo: ${currentUser.cargo}` : undefined}
+              >
+                <span>{badgeMeta.icon}</span>
+                <span>{badgeMeta.label}</span>
+                {currentUser.cargo && (
+                  <span style={{ opacity: 0.75, fontWeight: 500, fontSize: '0.7rem' }}>
+                    · {currentUser.cargo}
+                  </span>
+                )}
+              </span>
+            );
+          })()}
+
           <button
             onClick={() => setShowPasswordModal(true)}
             title="Cambiar contraseña"

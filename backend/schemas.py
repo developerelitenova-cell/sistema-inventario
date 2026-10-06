@@ -60,6 +60,8 @@ class RegisterRequest(BaseModel):
     additional_photos: Optional[List[str]] = []
     digital_signature_url: Optional[str] = None
     warehouse_key: Optional[str] = None
+    cargo: Optional[str] = None
+    role: Optional[RoleEnum] = RoleEnum.EMPLEADO
 
 class LoginRequest(BaseModel):
     email: str

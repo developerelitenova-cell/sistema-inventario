@@ -195,6 +195,8 @@ export const registerUser = (payload: {
   photo_url?: string;
   digital_signature_url?: string;
   warehouse_key?: string;
+  cargo?: string;
+  role?: Role;
 }) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
 
 export const login = (email: string, password: string) =>

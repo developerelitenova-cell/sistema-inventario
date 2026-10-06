@@ -72,16 +72,28 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
                 wh = db.query(models.Warehouse).filter(models.Warehouse.key.ilike("%elite%")).first()
         return wh
 
+    # Fallback inteligente si no seleccionaron bodega explícita pero el correo indica la empresa
+    eff_warehouse_key = payload.warehouse_key
+    if not eff_warehouse_key:
+        if "futupro" in email:
+            eff_warehouse_key = "futupro"
+        elif "elite" in email:
+            eff_warehouse_key = "elite_nutricion"
+
+    target_wh = _find_warehouse(eff_warehouse_key) if eff_warehouse_key else None
+
     if user:
         user.full_name = payload.full_name
         user.email = payload.email
         user.photo_url = photo_url or user.photo_url
         user.digital_signature_url = signature_url or user.digital_signature_url
         user.password_hash = password_hash
-        if payload.warehouse_key and not user.warehouses:
-            target_wh = _find_warehouse(payload.warehouse_key)
-            if target_wh:
-                user.warehouses.append(target_wh)
+        if payload.cargo:
+            user.cargo = payload.cargo.strip()
+        if payload.role and payload.role != models.RoleEnum.ADMIN:
+            user.role = payload.role
+        if target_wh and not user.warehouses:
+            user.warehouses.append(target_wh)
     else:
         base_username = _slugify_username(payload.full_name)
         username = base_username
@@ -94,6 +106,11 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
         if db_doc:
             raise HTTPException(status_code=400, detail="Ese documento ya tiene una cuenta registrada")
 
+        user_role = payload.role or models.RoleEnum.EMPLEADO
+        if user_role == models.RoleEnum.ADMIN:
+            # El rol admin no se puede autorrecetar por registro público
+            user_role = models.RoleEnum.EMPLEADO
+
         user = models.User(
             username=username,
             full_name=payload.full_name,
@@ -101,14 +118,13 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
             email=payload.email,
             photo_url=photo_url,
             digital_signature_url=signature_url,
-            role=models.RoleEnum.EMPLEADO,
+            role=user_role,
+            cargo=payload.cargo.strip() if payload.cargo else None,
             password_hash=password_hash,
         )
         
-        if payload.warehouse_key:
-            target_wh = _find_warehouse(payload.warehouse_key)
-            if target_wh:
-                user.warehouses.append(target_wh)
+        if target_wh:
+            user.warehouses.append(target_wh)
                 
         db.add(user)
 

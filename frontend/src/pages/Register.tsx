@@ -24,6 +24,8 @@ export default function Register() {
     document_id: "",
     email: "",
     warehouse_key: "",
+    cargo: "",
+    role: "empleado" as "empleado" | "salida" | "encargado",
   });
   const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_COMPANIES);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
@@ -145,6 +147,8 @@ export default function Register() {
         photo_url: photo,
         digital_signature_url: finalSignature ?? undefined,
         warehouse_key: formData.warehouse_key || undefined,
+        cargo: formData.cargo || undefined,
+        role: formData.role,
       });
       setToken(res.token);
       setGeneratedPassword(res.generated_password);
@@ -244,6 +248,28 @@ export default function Register() {
                     {w.key === 'elite_nutricion' ? '🏢 Elite Nutrition' : w.key.includes('futu') ? '⚽ FutuPro' : `📍 ${w.name}`}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Cargo / Función en la empresa</label>
+              <input 
+                type="text" 
+                placeholder="Ej. Mercadeo, Diseñador, Asesor, Bodega, etc."
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                value={formData.cargo}
+                onChange={e => setFormData(prev => ({...prev, cargo: e.target.value}))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Rol Operativo</label>
+              <select
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
+                value={formData.role}
+                onChange={e => setFormData(prev => ({...prev, role: e.target.value as "empleado" | "salida" | "encargado"}))}
+              >
+                <option value="empleado">👤 Empleado (Colaborador General)</option>
+                <option value="salida">🛡️ Personal de Salida (Portería / Vigilancia)</option>
+                <option value="encargado">🔑 Encargado de Bodega</option>
               </select>
             </div>
           </div>
