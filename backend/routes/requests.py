@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 import models, schemas
 from database import get_db
@@ -56,6 +56,11 @@ def get_my_asset_requests(
 ):
     return (
         db.query(models.AssetRequest)
+        .options(
+            joinedload(models.AssetRequest.requester),
+            joinedload(models.AssetRequest.reviewed_by),
+            joinedload(models.AssetRequest.resulting_loan).joinedload(models.Loan.asset),
+        )
         .filter(models.AssetRequest.requester_id == current_user.id)
         .order_by(models.AssetRequest.created_at.desc())
         .all()
@@ -68,7 +73,11 @@ def get_asset_requests(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ENCARGADO, models.RoleEnum.ADMIN)),
 ):
-    query = db.query(models.AssetRequest)
+    query = db.query(models.AssetRequest).options(
+        joinedload(models.AssetRequest.requester),
+        joinedload(models.AssetRequest.reviewed_by),
+        joinedload(models.AssetRequest.resulting_loan).joinedload(models.Loan.asset),
+    )
     if status_filter:
         try:
             query = query.filter(models.AssetRequest.status == models.RequestStatusEnum(status_filter))

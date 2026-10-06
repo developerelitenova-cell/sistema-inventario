@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles, Building2, Car } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
@@ -179,7 +179,7 @@ const EmployeeRequestView = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {myRequests.map((r) => (
-                <div key={r.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div key={r.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 600 }}>{r.category_requested ? CATEGORY_LABELS[r.category_requested] : 'Sin categoría'}</div>
@@ -189,6 +189,36 @@ const EmployeeRequestView = () => {
                       {REQUEST_STATUS_LABELS[r.status]}
                     </span>
                   </div>
+
+                  {r.status === 'assigned' && r.resulting_loan && (
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(52, 199, 89, 0.1)', border: '1px solid rgba(52, 199, 89, 0.25)', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <div>
+                          <span style={{ fontWeight: 700, color: 'var(--success)' }}>Activo Entregado: </span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{r.resulting_loan.asset?.unique_code}</span> — {r.resulting_loan.asset?.description}
+                        </div>
+                        <span className="badge" style={{
+                          background: r.resulting_loan.security_authorization === 'AUTORIZADO_SALIDA' ? 'rgba(255, 149, 0, 0.15)' : 'rgba(52, 199, 89, 0.15)',
+                          color: r.resulting_loan.security_authorization === 'AUTORIZADO_SALIDA' ? 'var(--warning)' : 'var(--success)',
+                          border: `1px solid ${r.resulting_loan.security_authorization === 'AUTORIZADO_SALIDA' ? 'rgba(255, 149, 0, 0.3)' : 'rgba(52, 199, 89, 0.3)'}`,
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          {r.resulting_loan.security_authorization === 'AUTORIZADO_SALIDA' ? (
+                            <><Car size={13} /> Autorizado para Salir</>
+                          ) : (
+                            <><Building2 size={13} /> Para Uso en la Empresa</>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {r.status === 'rejected' && r.review_notes && (
+                    <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.25)', fontSize: '0.85rem', color: 'var(--danger)' }}>
+                      <strong>Motivo de rechazo: </strong>{r.review_notes}
+                    </div>
+                  )}
+
                   <RequestCommentThread requestId={r.id} />
                 </div>
               ))}

@@ -479,6 +479,7 @@ export interface AssetRequest {
   review_notes: string | null;
   requester: User;
   reviewed_by: User | null;
+  resulting_loan?: Loan | null;
   comments?: RequestComment[];
 }
 

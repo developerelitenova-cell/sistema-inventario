@@ -259,6 +259,7 @@ class AssetRequest(BaseModel):
 
     requester: User
     reviewed_by: Optional[User] = None
+    resulting_loan: Optional[Loan] = None
     comments: List["RequestComment"] = []
 
     class Config:
