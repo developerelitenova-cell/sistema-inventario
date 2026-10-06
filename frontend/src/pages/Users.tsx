@@ -4,6 +4,7 @@ import { getUsers, toggleUserActive, resetUserPassword, ROLE_LABELS, type User }
 import UserEditModal from '../components/UserEditModal';
 import UserCreateModal from '../components/UserCreateModal';
 import UserProfileCard from '../components/UserProfileCard';
+import Pagination from '../components/Pagination';
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -11,6 +12,12 @@ const Users = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [creating, setCreating] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -61,6 +68,11 @@ const Users = () => {
     if (statusFilter === 'inactive') return matchesSearch && !isActive;
     return matchesSearch;
   });
+
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="animate-fade-in">
@@ -123,7 +135,7 @@ const Users = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredUsers.map((u) => {
+          {paginatedUsers.map((u) => {
             const isActive = u.is_active !== false;
             return (
               <div
@@ -209,6 +221,17 @@ const Users = () => {
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && filteredUsers.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredUsers.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+        />
       )}
 
       {editingUser && (

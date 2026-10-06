@@ -26,6 +26,7 @@ import { useWarehouses } from '../warehouseContext';
 import { getCachedUser } from '../components/LoginGate';
 import { Navigate } from 'react-router-dom';
 import { exportToCsv } from '../utils/exportUtils';
+import Pagination from '../components/Pagination';
 
 const Accounting = () => {
   const { module } = useModule();
@@ -41,6 +42,12 @@ const Accounting = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'ALL'>('ALL');
   const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, inventoryType, module]);
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +69,13 @@ const Accounting = () => {
       return matchesSearch && matchesCategory && matchesType;
     });
   }, [assets, searchQuery, selectedCategory, inventoryType]);
+
+  const paginatedAssets = useMemo(() => {
+    return filteredAssets.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }, [filteredAssets, currentPage, pageSize]);
 
   // Calcular totales sobre activos filtrados (o sobre totales? Sobre filtrados es más interactivo)
   const stats = useMemo(() => {
@@ -276,7 +290,7 @@ const Accounting = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredAssets.map(asset => {
+                {paginatedAssets.map(asset => {
                   const noValue = !asset.purchase_price && !asset.estimated_value && !asset.value;
                   return (
                     <tr 
@@ -319,6 +333,17 @@ const Accounting = () => {
           </div>
         )}
       </div>
+
+      {!loading && !error && filteredAssets.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredAssets.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[15, 25, 50, 100]}
+        />
+      )}
 
     </div>
   );

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { getUnusedAssets, formatCOP, type UnusedAsset } from '../api';
 import { useModule } from '../moduleContext';
+import Pagination from '../components/Pagination';
 
 const UnusedAssets = () => {
   const { module } = useModule();
   const [assets, setAssets] = useState<UnusedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     setLoading(true);
@@ -16,6 +20,26 @@ const UnusedAssets = () => {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [module]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, module]);
+
+  const filteredAssets = assets.filter((a) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      a.unique_code.toLowerCase().includes(term) ||
+      (a.description || '').toLowerCase().includes(term) ||
+      (a.brand_model || '').toLowerCase().includes(term) ||
+      (a.area || '').toLowerCase().includes(term)
+    );
+  });
+
+  const paginatedAssets = filteredAssets.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="animate-fade-in">
@@ -28,18 +52,30 @@ const UnusedAssets = () => {
         </div>
       </div>
 
+      <div style={{ marginBottom: '20px', position: 'relative', maxWidth: '420px' }}>
+        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <input
+          type="text"
+          className="input-field"
+          style={{ paddingLeft: '40px' }}
+          placeholder="Buscar por código, descripción, modelo o área..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>Cargando...</div>
       ) : error ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--danger-color)' }}>Error: {error}</div>
-      ) : assets.length === 0 ? (
+      ) : filteredAssets.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          No hay activos inactivos en este módulo. 🎉
+          {searchTerm ? 'No se encontraron activos que coincidan con la búsqueda.' : 'No hay activos inactivos en este módulo. 🎉'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {assets.map((asset) => (
-            <div key={asset.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+          {paginatedAssets.map((asset) => (
+            <div key={asset.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <AlertTriangle size={16} style={{ color: 'var(--warning-color)' }} />
@@ -64,6 +100,17 @@ const UnusedAssets = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && !error && filteredAssets.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredAssets.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+        />
       )}
     </div>
   );

@@ -17,6 +17,7 @@ import AssetViewModal from '../components/AssetViewModal';
 import RequestLoanModal from '../components/RequestLoanModal';
 import RequestCommentThread from '../components/RequestCommentThread';
 import ReturnAssetModal from '../components/ReturnAssetModal';
+import Pagination from '../components/Pagination';
 
 const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente', assigned: 'Asignada', rejected: 'Rechazada',
@@ -304,6 +305,12 @@ const CatalogView = () => {
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
   const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [module, searchTerm, inventoryType, statusFilter]);
 
   const loadAssets = () => {
     if (!module) return;
@@ -371,6 +378,11 @@ const CatalogView = () => {
     .sort((a, b) =>
       a.unique_code.localeCompare(b.unique_code, undefined, { numeric: true, sensitivity: 'base' })
     );
+
+  const paginatedAssets = filteredAssets.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="animate-fade-in">
@@ -461,7 +473,7 @@ const CatalogView = () => {
         </div>
       ) : (
         <div className="grid-cards">
-          {filteredAssets.map(asset => (
+          {paginatedAssets.map(asset => (
             <div key={asset.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -582,6 +594,17 @@ const CatalogView = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && !error && filteredAssets.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredAssets.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[12, 24, 48, 96]}
+        />
       )}
 
       {viewingAsset && (

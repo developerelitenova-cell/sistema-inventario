@@ -11,6 +11,7 @@ import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import UserProfileCard from '../components/UserProfileCard';
 import RequestCommentThread from '../components/RequestCommentThread';
+import Pagination from '../components/Pagination';
 
 type TabType = 'pending' | 'assigned' | 'rejected' | 'all';
 
@@ -31,6 +32,13 @@ const Requests = () => {
 
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset page when activeTab, searchQuery, or module changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, module]);
 
   const [selectedAsset, setSelectedAsset] = useState<Record<number, string>>({});
   const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
@@ -133,6 +141,11 @@ const Requests = () => {
       assetDesc.includes(q)
     );
   });
+
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="animate-fade-in">
@@ -294,7 +307,7 @@ const Requests = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredRequests.map((req) => {
+          {paginatedRequests.map((req) => {
             const options = assetsFor(req);
             const hasStock = options.length > 0;
             const inUse = inUseFor(req);
@@ -692,6 +705,17 @@ const Requests = () => {
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && filteredRequests.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredRequests.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+        />
       )}
     </div>
   );

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, XCircle, Plus } from 'lucide-react';
+import { RefreshCw, XCircle, Plus, Search } from 'lucide-react';
 import {
   getAssignments, createAssignment, renewAssignment, revokeAssignment, updateAssignment,
   getAssets, getUsers, type Assignment, type Asset, type User,
 } from '../api';
 import { useModule } from '../moduleContext';
+import Pagination from '../components/Pagination';
 
 const daysUntil = (isoDate: string) =>
   Math.ceil((new Date(isoDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -20,6 +21,13 @@ const Assignments = () => {
   const [form, setForm] = useState({ assetId: '', userId: '', durationDays: '90', notes: '', securityAuthorization: 'INTERNO' });
   const [submitting, setSubmitting] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, module]);
 
   const load = () => {
     setLoading(true);
@@ -66,6 +74,22 @@ const Assignments = () => {
     load();
   };
 
+  const filteredAssignments = assignments.filter((a) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      a.asset.unique_code.toLowerCase().includes(term) ||
+      (a.asset.description || '').toLowerCase().includes(term) ||
+      a.user.full_name.toLowerCase().includes(term) ||
+      (a.notes || '').toLowerCase().includes(term)
+    );
+  });
+
+  const paginatedAssignments = filteredAssignments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <div className="animate-fade-in">
       <div className="header">
@@ -78,6 +102,18 @@ const Assignments = () => {
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
           <Plus size={18} /> Nueva asignación
         </button>
+      </div>
+
+      <div style={{ marginBottom: '20px', position: 'relative', maxWidth: '420px' }}>
+        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <input
+          type="text"
+          className="input-field"
+          style={{ paddingLeft: '40px' }}
+          placeholder="Buscar por activo, código, líder o notas..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       {showForm && (
@@ -118,13 +154,13 @@ const Assignments = () => {
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>Cargando...</div>
       ) : error ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--danger-color)' }}>Error: {error}</div>
-      ) : assignments.length === 0 ? (
+      ) : filteredAssignments.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          No hay asignaciones activas en este módulo.
+          {searchTerm ? 'No se encontraron asignaciones que coincidan con la búsqueda.' : 'No hay asignaciones activas en este módulo.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {assignments.map((a) => {
+          {paginatedAssignments.map((a) => {
             const remaining = daysUntil(a.expiration_date);
             const expiringSoon = remaining <= 7;
             return (
@@ -163,6 +199,17 @@ const Assignments = () => {
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && filteredAssignments.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredAssignments.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+        />
       )}
       {editingAssignment && (
         <div className="modal-overlay">

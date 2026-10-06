@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getAssets, getUsers, CATEGORY_LABELS, type Asset, type User } from '../api';
 import { useModule } from '../moduleContext';
 import { UserCheck, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 const Responsibles = () => {
   const { module } = useModule();
@@ -11,6 +12,12 @@ const Responsibles = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedResponsibles, setExpandedResponsibles] = useState<Record<string, boolean>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, module]);
 
   useEffect(() => {
     setLoading(true);
@@ -55,6 +62,11 @@ const Responsibles = () => {
       .sort((a, b) => a.localeCompare(b));
   }, [groupedAssets, searchTerm, users]);
 
+  const paginatedResponsibles = filteredResponsibles.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const toggleResponsible = (name: string) => {
     setExpandedResponsibles(prev => ({
       ...prev,
@@ -98,7 +110,7 @@ const Responsibles = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredResponsibles.map((responsible) => {
+          {paginatedResponsibles.map((responsible) => {
             const responsibleAssets = groupedAssets[responsible];
             const isExpanded = expandedResponsibles[responsible] || false;
             
@@ -180,6 +192,17 @@ const Responsibles = () => {
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && filteredResponsibles.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredResponsibles.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+        />
       )}
     </div>
   );
