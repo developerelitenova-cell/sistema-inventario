@@ -73,6 +73,7 @@ export interface Asset {
   photo_url: string | null;
   status: AssetStatus;
   qr_data: string;
+  is_active?: boolean;
   module: Module;
   area: string | null;
   responsible_name: string | null;
@@ -107,6 +108,7 @@ export interface User {
   role: Role;
   warehouses: Warehouse[];
   cargo: string | null;
+  is_active?: boolean;
 }
 
 /** Admin maestro = rol admin sin bodegas asignadas (ve/gestiona todo).
@@ -350,6 +352,12 @@ export const createUser = (payload: UserCreateInput) =>
 
 export const deleteUser = (userId: number) =>
   request<void>(`/users/${userId}`, { method: 'DELETE' });
+
+export const toggleUserActive = (userId: number) =>
+  request<User>(`/users/${userId}/toggle-active`, { method: 'PATCH' });
+
+export const restoreAsset = (assetId: number) =>
+  request<Asset>(`/assets/${assetId}/restore`, { method: 'PATCH' });
 
 export const getRolePermissions = () => request<RolePermission[]>('/role-permissions/');
 

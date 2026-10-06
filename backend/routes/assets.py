@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 import models, schemas
 from database import get_db
@@ -28,16 +29,20 @@ def create_asset(
     db: Session = Depends(get_db),
     _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
-    db_asset = db.query(models.Asset).filter(models.Asset.unique_code == asset.unique_code).first()
+    clean_code = asset.unique_code.strip().upper()
+    if not clean_code:
+        raise HTTPException(status_code=400, detail="El código del activo no puede estar vacío")
+
+    db_asset = db.query(models.Asset).filter(models.Asset.unique_code == clean_code).first()
     if db_asset:
-        raise HTTPException(status_code=400, detail="Activo ya registrado")
+        raise HTTPException(status_code=400, detail="Activo ya registrado con este código")
 
     if not auth_service.can_access_warehouse(_user, asset.module):
         raise HTTPException(status_code=403, detail="No podés crear activos en una bodega a la que no tenés acceso")
 
     photo_url = asset.photo_url
     if photo_url and photo_url.startswith("data:image"):
-        uploaded = upload_base64_image(photo_url, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
+        uploaded = upload_base64_image(photo_url, "inventory-assets", "assets/photos", f"{clean_code}_photo")
         if uploaded:
             photo_url = uploaded
 
@@ -45,24 +50,25 @@ def create_asset(
     if getattr(asset, 'additional_photos', None):
         for idx, p in enumerate(asset.additional_photos):
             if p and p.startswith("data:image"):
-                upl = upload_base64_image(p, "inventory-assets", "assets/photos", f"{asset.unique_code}_add_{idx}")
+                upl = upload_base64_image(p, "inventory-assets", "assets/photos", f"{clean_code}_add_{idx}")
                 if upl:
                     additional_photos_uploaded.append(upl)
             elif p:
                 additional_photos_uploaded.append(p)
 
-    # Generar QR (codifica el unique_code, es lo que lee el Scanner de seguridad)
-    qr_base64 = qr_generator.generate_qr_base64(asset.unique_code)
+    # Generar QR (codifica el unique_code limpio)
+    qr_base64 = qr_generator.generate_qr_base64(clean_code)
 
     category = asset.category or classify_asset(asset.description, asset.brand_model)
 
     new_asset = models.Asset(
-        unique_code=asset.unique_code,
+        unique_code=clean_code,
         description=asset.description,
         brand_model=asset.brand_model,
         photo_url=photo_url,
         status=asset.status,
         qr_data=qr_base64,
+        is_active=True,
         module=asset.module,
         area=asset.area,
         responsible_name=asset.responsible_name,
@@ -160,6 +166,12 @@ def get_asset_by_code(
 @router.get("/assets/", response_model=List[schemas.Asset])
 def get_assets(
     module: Optional[str] = None,
+    include_inactive: bool = False,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    skip: Optional[int] = None,
+    limit: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.get_current_user),
 ):
@@ -169,13 +181,42 @@ def get_assets(
         raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
 
     query = db.query(models.Asset)
+    if not include_inactive:
+        query = query.filter(models.Asset.is_active == True)
+
     if module:
         query = query.filter(models.Asset.module == module)
     else:
         allowed = auth_service.visible_warehouse_keys(current_user)
         if allowed is not None:
             query = query.filter(models.Asset.module.in_(allowed))
-    assets = query.all()
+
+    if status:
+        try:
+            query = query.filter(models.Asset.status == models.AssetStatusEnum(status))
+        except ValueError:
+            query = query.filter(models.Asset.status == status)
+
+    if category:
+        query = query.filter(models.Asset.category == category)
+
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                models.Asset.unique_code.ilike(s),
+                models.Asset.description.ilike(s),
+                models.Asset.brand_model.ilike(s),
+                models.Asset.responsible_name.ilike(s),
+            )
+        )
+
+    if skip is not None:
+        query = query.offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
+
+    assets = query.order_by(models.Asset.unique_code.asc()).all()
 
     if current_user.role not in (models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO):
         for asset in assets:
@@ -280,6 +321,52 @@ def update_asset(
         raise HTTPException(status_code=403, detail="No podés editar activos de esta bodega")
     if update.module and not auth_service.can_access_warehouse(_user, update.module):
         raise HTTPException(status_code=403, detail="No podés mover el activo a esa bodega")
+
+    # MÁQUINA DE ESTADOS: Reglas de transición seguras
+    if update.status is not None and update.status != asset.status:
+        # Regla 1: Solo se puede pasar a Mantenimiento si el activo está Disponible
+        if update.status == models.AssetStatusEnum.MAINTENANCE:
+            if asset.status != models.AssetStatusEnum.AVAILABLE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Solo se puede enviar a mantenimiento un activo que esté 'Disponible'. Estado actual: {asset.status.value}"
+                )
+
+        # Regla 2: El estado Asignado no se fuerza desde el modal de activo, requiere el módulo de Asignaciones
+        elif update.status == models.AssetStatusEnum.ASSIGNED:
+            raise HTTPException(
+                status_code=400,
+                detail="El estado 'Asignado' debe establecerse formalmente a través del módulo de Asignaciones vinculando a un colaborador."
+            )
+
+        # Regla 3: No se puede marcar Disponible si tiene préstamo o asignación activa en curso
+        elif update.status == models.AssetStatusEnum.AVAILABLE:
+            active_loan = db.query(models.Loan).filter(
+                models.Loan.asset_id == asset.id,
+                models.Loan.status.in_([models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED])
+            ).first()
+            if active_loan:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El activo tiene un préstamo activo en curso. Registre la devolución en portería antes de marcarlo como Disponible."
+                )
+            active_assignment = db.query(models.AssetAssignment).filter(
+                models.AssetAssignment.asset_id == asset.id,
+                models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+            ).first()
+            if active_assignment:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El activo tiene una asignación activa. Debe revocar la asignación antes de marcarlo como Disponible."
+                )
+
+        # Regla 4: No se puede regresar a Pendiente de Registro si ya fue dado de alta
+        elif update.status == models.AssetStatusEnum.PENDING_REGISTRATION:
+            if asset.status != models.AssetStatusEnum.PENDING_REGISTRATION:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se puede regresar al estado 'Pendiente de Registro' un activo que ya fue dado de alta previamente."
+                )
 
     for field, value in update.model_dump(exclude_unset=True).items():
         if field == "accessories":
@@ -464,9 +551,41 @@ def delete_asset(
     
     # Check if there are active loans
     if asset.status in (models.AssetStatusEnum.LOANED, models.AssetStatusEnum.ASSIGNED):
-        raise HTTPException(status_code=400, detail="No se puede eliminar un activo que está en préstamo o asignado")
+        raise HTTPException(status_code=400, detail="No se puede deshabilitar un activo que está actualmente en préstamo o asignado")
 
-    db.delete(asset)
-    audit.log_action(db, _admin, "asset.deleted", f"{_admin.full_name} eliminó el activo {asset.unique_code}", entity_type="asset", entity_id=asset_id)
+    active_loan = db.query(models.Loan).filter(
+        models.Loan.asset_id == asset.id,
+        models.Loan.status.in_([models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED])
+    ).first()
+    if active_loan:
+        raise HTTPException(status_code=400, detail="El activo tiene préstamos activos. Debe devolverse antes de darlo de baja.")
+
+    active_assignment = db.query(models.AssetAssignment).filter(
+        models.AssetAssignment.asset_id == asset.id,
+        models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+    ).first()
+    if active_assignment:
+        raise HTTPException(status_code=400, detail="El activo tiene asignaciones activas. Debe revocarse antes de darlo de baja.")
+
+    # SOFT DELETE: Inactivar sin destruir histórico de préstamos, trazabilidad ni inventario
+    asset.is_active = False
+    audit.log_action(db, _admin, "asset.deactivated", f"{_admin.full_name} deshabilitó el activo {asset.unique_code}", entity_type="asset", entity_id=asset_id)
     db.commit()
     return None
+
+
+@router.patch("/assets/{asset_id}/restore", response_model=schemas.Asset)
+def restore_asset(
+    asset_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_master_admin()),
+):
+    asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+
+    asset.is_active = True
+    audit.log_action(db, _admin, "asset.restored", f"{_admin.full_name} reactivó el activo {asset.unique_code}", entity_type="asset", entity_id=asset_id)
+    db.commit()
+    db.refresh(asset)
+    return asset

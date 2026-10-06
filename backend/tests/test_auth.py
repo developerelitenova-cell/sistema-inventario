@@ -134,30 +134,19 @@ def test_change_password(client: TestClient, db_session):
     })
     assert response.status_code == 200
 
-def test_logout(client: TestClient, db_session):
-    from models import User, RoleEnum
-    user = User(
-        username="logout_test",
-        full_name="Logout Test",
-        email="logout@example.com",
-        document_id="555555",
-        role=RoleEnum.EMPLEADO,
-        password_hash=hash_password("MySecretPass!23")
-    )
-    db_session.add(user)
-    db_session.commit()
-
-    # Login
+def test_logout(client: TestClient, test_user):
+    # Login con el usuario de prueba estándar
     response = client.post("/auth/login", json={
-        "email": "logout@example.com",
+        "email": test_user.email,
         "password": "MySecretPass!23"
     })
+    assert response.status_code == 200, response.text
     token = response.json()["token"]
 
     # Logout
     response = client.post("/auth/logout", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
 
-    # Try to access protected route
+    # Intento de acceso a ruta protegida después de cerrar sesión
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401

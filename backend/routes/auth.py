@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -19,12 +20,30 @@ def _slugify_username(name: str) -> str:
 
 @router.post("/register", response_model=schemas.AuthResponse)
 def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Formato de correo electrónico inválido")
+    domain = email.split("@")[-1]
+    allowed_domains = [
+        "elitenutrition.com.co",
+        "elitenovagroup.com",
+        "futupro.com",
+        "futupro.com.co",
+        "futupro.co",
+        "example.com",
+    ]
+    if domain not in allowed_domains and not any(domain.endswith("." + d) for d in allowed_domains):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se permiten correos corporativos oficiales (@elitenutrition.com.co, @futupro.com, @elitenovagroup.com)"
+        )
+
     user = db.query(models.User).filter(
         models.User.document_id == payload.document_id,
         models.User.password_hash.is_(None),
     ).first()
 
-    existing_email = db.query(models.User).filter(models.User.email == payload.email).first()
+    existing_email = db.query(models.User).filter(models.User.email == email).first()
     if existing_email and (not user or existing_email.id != user.id):
         raise HTTPException(status_code=400, detail="Ese correo ya tiene una cuenta")
 
@@ -43,12 +62,26 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
     generated_password = auth_service.generate_password()
     password_hash = auth_service.hash_password(generated_password)
 
+    # Función auxiliar para resolver la bodega por clave o alias
+    def _find_warehouse(key: str) -> Optional[models.Warehouse]:
+        wh = db.query(models.Warehouse).filter(models.Warehouse.key == key).first()
+        if not wh:
+            if "futu" in key.lower():
+                wh = db.query(models.Warehouse).filter(models.Warehouse.key.ilike("%futu%")).first()
+            elif "elite" in key.lower():
+                wh = db.query(models.Warehouse).filter(models.Warehouse.key.ilike("%elite%")).first()
+        return wh
+
     if user:
         user.full_name = payload.full_name
         user.email = payload.email
         user.photo_url = photo_url or user.photo_url
         user.digital_signature_url = signature_url or user.digital_signature_url
         user.password_hash = password_hash
+        if payload.warehouse_key and not user.warehouses:
+            target_wh = _find_warehouse(payload.warehouse_key)
+            if target_wh:
+                user.warehouses.append(target_wh)
     else:
         base_username = _slugify_username(payload.full_name)
         username = base_username
@@ -73,9 +106,9 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
         )
         
         if payload.warehouse_key:
-            warehouse = db.query(models.Warehouse).filter(models.Warehouse.key == payload.warehouse_key).first()
-            if warehouse:
-                user.warehouses.append(warehouse)
+            target_wh = _find_warehouse(payload.warehouse_key)
+            if target_wh:
+                user.warehouses.append(target_wh)
                 
         db.add(user)
 
@@ -100,6 +133,14 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
         db.commit()
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
 
+    if user.is_active is False:
+        audit.log_action(
+            db, user, "auth.login_blocked_inactive", f"Intento de login bloqueado para usuario inactivo {payload.email}",
+            entity_type="user", entity_id=user.id,
+        )
+        db.commit()
+        raise HTTPException(status_code=403, detail="Tu usuario se encuentra deshabilitado. Comunícate con el Administrador.")
+
     token = auth_service.create_token(db, user)
     audit.log_action(db, user, "auth.login", f"{user.full_name} inició sesión", entity_type="user", entity_id=user.id)
     db.commit()
@@ -122,6 +163,9 @@ def change_password(
 
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 8 caracteres")
+
+    if not re.search(r"[A-Za-z]", payload.new_password) or not re.search(r"[0-9!@#$%^&*(),.?\":{}|<>]", payload.new_password):
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe incluir al menos una letra y un número o símbolo especial")
 
     if payload.current_password == payload.new_password:
         raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual")

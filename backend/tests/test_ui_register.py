@@ -1,11 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 from models import Asset, AssetStatusEnum
-from services.auth import create_access_token
+from services.auth import create_token
 
 @pytest.fixture
-def admin_token(admin_user):
-    return create_access_token(data={"sub": admin_user.username})
+def admin_token(db_session, admin_user):
+    return create_token(db_session, admin_user)
 
 @pytest.fixture
 def db_asset(db_session, admin_user):

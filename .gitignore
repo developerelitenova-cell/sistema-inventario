@@ -28,3 +28,6 @@ frontend/dist/
 
 # Claude Code local
 .claude/
+
+# OS
+.DS_Store

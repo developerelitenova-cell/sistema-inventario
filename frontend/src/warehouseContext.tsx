@@ -28,7 +28,7 @@ export const WarehouseProvider = ({ children }: { children: ReactNode }) => {
   const user = getCachedUser();
   const filteredWarehouses = isMasterAdmin(user) 
     ? warehouses 
-    : warehouses.filter(w => user?.warehouses.some(uw => uw.id === w.id));
+    : warehouses.filter(w => user?.warehouses?.some(uw => uw.id === w.id || uw.key === w.key));
 
   const labels = Object.fromEntries(warehouses.map((w) => [w.key, w.name]));
 

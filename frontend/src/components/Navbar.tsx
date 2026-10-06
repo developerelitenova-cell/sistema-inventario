@@ -22,6 +22,7 @@ const Navbar = () => {
       await logoutApi();
     } finally {
       clearToken();
+      sessionStorage.removeItem('current_module');
       window.location.href = '/dashboard';
     }
   };

@@ -65,7 +65,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Estás seguro de que quieres eliminar este activo? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Estás seguro de deshabilitar este activo? El registro pasará a estado inactivo (Soft Delete) preservando todo su historial y trazabilidad.")) return;
     setSaving(true);
     try {
       await deleteAsset(asset.id);
@@ -220,9 +220,28 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
             <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Estado</div>
               <select className="input-field" value={form.status} onChange={(e) => update('status', e.target.value)}>
-                {(Object.keys(STATUS_LABELS) as AssetStatus[]).map((s) => (
-                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                ))}
+                {(Object.keys(STATUS_LABELS) as AssetStatus[]).map((s) => {
+                  let disabled = false;
+                  let note = '';
+                  if (s === 'assigned' && asset.status !== 'assigned') {
+                    disabled = true;
+                    note = ' (vía módulo Asignaciones)';
+                  } else if (s === 'pending_registration' && asset.status !== 'pending_registration') {
+                    disabled = true;
+                    note = ' (no reversible)';
+                  } else if (s === 'maintenance' && asset.status !== 'available' && asset.status !== 'maintenance') {
+                    disabled = true;
+                    note = ' (solo si está Disponible)';
+                  } else if (s === 'available' && (asset.status === 'loaned' || asset.status === 'assigned')) {
+                    disabled = true;
+                    note = ' (requiere devolución previa)';
+                  }
+                  return (
+                    <option key={s} value={s} disabled={disabled}>
+                      {STATUS_LABELS[s]}{note}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <label style={{ flex: 1 }}>

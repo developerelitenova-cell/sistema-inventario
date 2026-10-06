@@ -5,6 +5,18 @@ import { registerUser, getPublicWarehouses, type Warehouse } from "../api";
 import { setToken } from "../session";
 import CameraCapture from "../components/CameraCapture";
 
+// Catálogo predeterminado para garantizar disponibilidad inmediata aún sin conexión o durante carga de API
+const DEFAULT_COMPANIES: Warehouse[] = [
+  { id: 1, key: "elite_nutricion", name: "Elite Nutrition", is_active: true },
+  { id: 2, key: "futupro", name: "FutuPro", is_active: true },
+  { id: 3, key: "estudio", name: "Estudio", is_active: true },
+  { id: 4, key: "estadio", name: "Estadio", is_active: true },
+  { id: 5, key: "junin", name: "Junín", is_active: true },
+  { id: 6, key: "ee_uu", name: "EE.UU", is_active: true },
+  { id: 7, key: "lago_verde", name: "Lago Verde", is_active: true },
+  { id: 8, key: "unicentro", name: "Unicentro", is_active: true },
+];
+
 export default function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -13,7 +25,7 @@ export default function Register() {
     email: "",
     warehouse_key: "",
   });
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_COMPANIES);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -21,8 +33,39 @@ export default function Register() {
   const [photo, setPhoto] = useState<string | null>(null);
 
   React.useEffect(() => {
-    getPublicWarehouses().then(setWarehouses).catch(console.error);
+    getPublicWarehouses()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Normalizar nombres si es necesario (ej. "Futuro Pro" -> "FutuPro")
+          const normalized = data.map((w) => ({
+            ...w,
+            name: w.key.includes("futu") ? "FutuPro" : w.name,
+          }));
+          setWarehouses(normalized);
+        }
+      })
+      .catch((err) => {
+        console.warn("API de bodegas públicas no disponible, usando catálogo integrado:", err);
+      });
   }, []);
+
+  const handleEmailChange = (newEmail: string) => {
+    const lower = newEmail.toLowerCase().trim();
+    let autoWarehouse = formData.warehouse_key;
+
+    // Autoselección inteligente basada en el dominio corporativo
+    if (lower.includes("@futupro")) {
+      autoWarehouse = "futupro";
+    } else if (lower.includes("@elitenutrition") || lower.includes("@elitenova")) {
+      autoWarehouse = "elite_nutricion";
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      email: newEmail,
+      warehouse_key: autoWarehouse || prev.warehouse_key,
+    }));
+  };
 
   // Signature state
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -147,7 +190,10 @@ export default function Register() {
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="liquid-glass p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
-        <h1 className="text-2xl md:text-3xl font-bold mb-6 text-slate-900 text-center">Registro Biométrico de Usuario</h1>
+        <div className="text-center mb-6">
+          <p className="text-xs uppercase tracking-widest font-bold text-[var(--gold)] mb-1">Elite Nutrition · FutuPro</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Registro de Colaborador</h1>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-8">
           
@@ -174,26 +220,29 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico Corporativo</label>
               <input 
                 type="email" 
                 required
+                placeholder="usuario@elitenutrition.com.co o @futupro.com"
                 className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.email}
-                onChange={e => setFormData({...formData, email: e.target.value})}
+                onChange={e => handleEmailChange(e.target.value)}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Empresa a la que perteneces</label>
               <select
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
                 value={formData.warehouse_key}
-                onChange={e => setFormData({...formData, warehouse_key: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, warehouse_key: e.target.value}))}
               >
                 <option value="">-- Seleccionar Empresa --</option>
                 {warehouses.map(w => (
-                  <option key={w.key} value={w.key}>{w.name}</option>
+                  <option key={w.key} value={w.key}>
+                    {w.key === 'elite_nutricion' ? '🏢 Elite Nutrition' : w.key.includes('futu') ? '⚽ FutuPro' : `📍 ${w.name}`}
+                  </option>
                 ))}
               </select>
             </div>

@@ -95,6 +95,7 @@ class User(Base):
 
     warehouses = relationship("Warehouse", secondary=user_warehouses, backref="users")
     cargo = Column(String, nullable=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     password_hash = Column(String, nullable=True)
 
@@ -113,6 +114,7 @@ class Asset(Base):
     additional_photos = Column(JSON, default=list)
     status = Column(Enum(AssetStatusEnum), default=AssetStatusEnum.AVAILABLE)
     qr_data = Column(String, unique=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     module = Column(String, ForeignKey("warehouses.key"), nullable=False, index=True)
 

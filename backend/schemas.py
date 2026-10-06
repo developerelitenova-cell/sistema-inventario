@@ -35,6 +35,7 @@ class UserBase(BaseModel):
     digital_signature_url: Optional[str] = None
     role: RoleEnum
     cargo: Optional[str] = None
+    is_active: bool = True
 
 class UserCreate(UserBase):
     warehouse_keys: List[str] = []
@@ -49,6 +50,7 @@ class UserUpdate(BaseModel):
     cargo: Optional[str] = None
     role: Optional[RoleEnum] = None
     warehouse_keys: Optional[List[str]] = None
+    is_active: Optional[bool] = None
 
 class RegisterRequest(BaseModel):
     full_name: str
@@ -87,7 +89,8 @@ class AssetBase(BaseModel):
     photo_url: Optional[str] = None
     additional_photos: Optional[List[str]] = []
     status: AssetStatusEnum = AssetStatusEnum.AVAILABLE
-    qr_data: str
+    qr_data: Optional[str] = None
+    is_active: bool = True
     module: str
     area: Optional[str] = None
     responsible_name: Optional[str] = None

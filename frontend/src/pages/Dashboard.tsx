@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Search, Pencil, Send, Info, CornerDownLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
@@ -8,7 +9,9 @@ import {
   type Loan, type Assignment
 } from '../api';
 import { useModule } from '../moduleContext';
+import { useWarehouses } from '../warehouseContext';
 import { getCachedUser } from '../components/LoginGate';
+import { exportToCsv } from '../utils/exportUtils';
 import AssetEditModal from '../components/AssetEditModal';
 import AssetViewModal from '../components/AssetViewModal';
 import RequestLoanModal from '../components/RequestLoanModal';
@@ -257,6 +260,7 @@ const EmployeeRequestView = () => {
 
 const CatalogView = () => {
   const { module } = useModule();
+  const { labels } = useWarehouses();
   const currentUser = getCachedUser();
   const canSeeValues = currentUser?.role === 'admin' || currentUser?.role === 'encargado';
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -269,8 +273,10 @@ const CatalogView = () => {
   const [requestingAsset, setRequestingAsset] = useState<Asset | null>(null);
   const [requestedMsg, setRequestedMsg] = useState<string | null>(null);
   const [inventoryType, setInventoryType] = useState<InventoryType | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   const loadAssets = () => {
+    if (!module) return;
     setLoading(true);
     getAssets(module)
       .then(setAssets)
@@ -279,7 +285,9 @@ const CatalogView = () => {
   };
 
   useEffect(() => {
-    loadAssets();
+    if (module) {
+      loadAssets();
+    }
   }, [module]);
 
   const handleReturnAssetSubmit = async (details: { observations: string; condition_status: string }) => {
@@ -293,28 +301,69 @@ const CatalogView = () => {
     }
   };
 
-  const filteredAssets = assets.filter(a => {
-    const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    
-    const matchesType = inventoryType === 'ALL' || a.inventory_type === inventoryType;
-    return matchesSearch && matchesType;
-  });
+  const handleExportCsv = () => {
+    exportToCsv<Asset>(
+      `catalogo_activos_${module}_${new Date().toISOString().split('T')[0]}`,
+      [
+        { header: 'Código Único', accessor: a => a.unique_code },
+        { header: 'Descripción', accessor: a => a.description || '' },
+        { header: 'Marca / Modelo', accessor: a => a.brand_model || '' },
+        { header: 'Estado', accessor: a => STATUS_LABELS[a.status] || a.status },
+        { header: 'Tipo Inventario', accessor: a => INVENTORY_TYPE_LABELS[a.inventory_type] || a.inventory_type },
+        { header: 'Área', accessor: a => a.area || '' },
+        { header: 'Responsable', accessor: a => a.responsible_name || '' },
+        { header: 'Precio Compra (COP)', accessor: a => a.purchase_price || '' },
+        { header: 'Valor Estimado (COP)', accessor: a => a.estimated_value || '' },
+        { header: 'Categoría', accessor: a => (a.category ? (CATEGORY_LABELS[a.category] || a.category) : '') },
+      ],
+      filteredAssets
+    );
+  };
+
+  const availableCount = assets.filter(a => a.status === 'available').length;
+  const assignedCount = assets.filter(a => a.status === 'assigned').length;
+  const loanedCount = assets.filter(a => a.status === 'loaned').length;
+  const maintenanceCount = assets.filter(a => a.status === 'maintenance').length;
+  const pendingCount = assets.filter(a => a.status === 'pending_registration').length;
+
+  // Orden natural secuencial numérico por código correlativo (ej. EE-0001, EE-0002)
+  const filteredAssets = assets
+    .filter(a => {
+      const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+      
+      const matchesType = inventoryType === 'ALL' || a.inventory_type === inventoryType;
+      const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    })
+    .sort((a, b) =>
+      a.unique_code.localeCompare(b.unique_code, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
   return (
     <div className="animate-fade-in">
-      <div className="header">
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="title">Catálogo de Activos</h1>
+          <h1 className="title">Catálogo de Activos · {labels[module] || module}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            {loading ? 'Cargando...' : `${filteredAssets.length} activos registrados`}
+            {loading ? 'Cargando inventario...' : `${filteredAssets.length} activos listados en orden secuencial`}
           </p>
         </div>
+        <button
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          onClick={handleExportCsv}
+          disabled={filteredAssets.length === 0}
+          title="Descargar catálogo en formato compatible con Excel"
+        >
+          <Download size={18} />
+          Exportar a Excel ({filteredAssets.length})
+        </button>
       </div>
 
-      <div style={{ marginBottom: '32px', position: 'relative', maxWidth: '400px' }}>
+      <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '400px' }}>
         <Search size={20} style={{ position: 'absolute', left: '16px', top: '12px', color: 'var(--text-secondary)' }} />
         <input
           type="text"
@@ -326,17 +375,41 @@ const CatalogView = () => {
         />
       </div>
 
+      {/* Filtros por Estado con Contadores */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {[
+          { key: 'ALL', label: `Todos (${assets.length})` },
+          { key: 'available', label: `Disponibles (${availableCount})` },
+          { key: 'assigned', label: `Asignados (${assignedCount})` },
+          { key: 'loaned', label: `En Préstamo (${loanedCount})` },
+          { key: 'maintenance', label: `Mantenimiento (${maintenanceCount})` },
+          { key: 'pending_registration', label: `⏳ En Espera de Registro (${pendingCount})` },
+        ].map(item => (
+          <button
+            key={item.key}
+            className={`btn ${statusFilter === item.key ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.85rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
+            onClick={() => setStatusFilter(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtros por Tipo de Inventario */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
         <button
           className={`btn ${inventoryType === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ fontSize: '0.85rem', padding: '6px 12px' }}
           onClick={() => setInventoryType('ALL')}
         >
-          Todos
+          Todos los Tipos
         </button>
         {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
           <button
             key={key}
             className={`btn ${inventoryType === key ? 'btn-primary' : 'btn-outline'}`}
+            style={{ fontSize: '0.85rem', padding: '6px 12px' }}
             onClick={() => setInventoryType(key as InventoryType)}
           >
             {label}
@@ -354,18 +427,53 @@ const CatalogView = () => {
         </div>
       ) : filteredAssets.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          No se han creado activos en esta área.
+          No se encontraron activos con los filtros aplicados.
         </div>
       ) : (
         <div className="grid-cards">
           {filteredAssets.map(asset => (
             <div key={asset.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{asset.unique_code}</div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>{asset.description ?? 'Pendiente de registro'}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  {asset.photo_url ? (
+                    <img
+                      src={asset.photo_url}
+                      alt={asset.description || 'Activo'}
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        border: '1px solid var(--border)',
+                        flexShrink: 0
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '8px',
+                        background: 'rgba(212, 160, 23, 0.08)',
+                        border: '1px dashed var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        color: 'var(--text-tertiary)'
+                      }}
+                    >
+                      <ImageIcon size={22} />
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>{asset.unique_code}</div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {asset.description ?? 'Pendiente de registro'}
+                    </h3>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                   <span className={`badge badge-${asset.status}`}>
                     {STATUS_LABELS[asset.status]}
                   </span>
@@ -422,14 +530,24 @@ const CatalogView = () => {
               </div>
 
               <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
-                <button
-                  className="btn btn-outline"
-                  style={{ width: '100%' }}
-                  disabled={asset.status !== 'available'}
-                  onClick={() => setRequestingAsset(asset)}
-                >
-                  Solicitar Préstamo
-                </button>
+                {asset.status === 'pending_registration' ? (
+                  <Link
+                    to={`/assets/register-by-code?code=${asset.unique_code}`}
+                    className="btn btn-primary"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem', textDecoration: 'none' }}
+                  >
+                    <Sparkles size={16} /> Completar Registro de Activo
+                  </Link>
+                ) : (
+                  <button
+                    className="btn btn-outline"
+                    style={{ width: '100%' }}
+                    disabled={asset.status !== 'available'}
+                    onClick={() => setRequestingAsset(asset)}
+                  >
+                    Solicitar Préstamo
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -54,8 +54,21 @@ def get_current_user(
     token = authorization.removeprefix("Bearer ").strip()
     hashed_token = hashlib.sha256(token.encode()).hexdigest()
     auth_token = db.query(models.AuthToken).filter(models.AuthToken.token == hashed_token).first()
-    if not auth_token or auth_token.expires_at < get_colombia_time():
+    if not auth_token:
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+    exp = auth_token.expires_at
+    now = get_colombia_time()
+    if exp.tzinfo is None and now.tzinfo is not None:
+        exp = exp.replace(tzinfo=now.tzinfo)
+    elif exp.tzinfo is not None and now.tzinfo is None:
+        now = now.replace(tzinfo=exp.tzinfo)
+
+    if exp < now:
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+    if auth_token.user.is_active is False:
+        raise HTTPException(status_code=403, detail="Usuario inactivo o deshabilitado")
 
     return auth_token.user
 

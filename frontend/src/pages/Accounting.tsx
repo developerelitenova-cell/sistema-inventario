@@ -7,12 +7,14 @@ import {
   Filter, 
   AlertCircle,
   Package,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
 import {
   getAssets,
   formatCOP,
   CATEGORY_LABELS,
+  STATUS_LABELS,
   type Asset,
   type Category,
   type InventoryType,
@@ -23,6 +25,7 @@ import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import { getCachedUser } from '../components/LoginGate';
 import { Navigate } from 'react-router-dom';
+import { exportToCsv } from '../utils/exportUtils';
 
 const Accounting = () => {
   const { module } = useModule();
@@ -86,6 +89,28 @@ const Accounting = () => {
     };
   }, [filteredAssets]);
 
+  const handleExportCsv = () => {
+    exportToCsv<Asset>(
+      `reporte_contabilidad_${module}_${new Date().toISOString().split('T')[0]}`,
+      [
+        { header: 'Código Único', accessor: a => a.unique_code },
+        { header: 'Descripción', accessor: a => a.description },
+        { header: 'Marca / Modelo', accessor: a => a.brand_model || '' },
+        { header: 'Categoría', accessor: a => (a.category ? (CATEGORY_LABELS[a.category] || a.category) : '') },
+        { header: 'Tipo Inventario', accessor: a => INVENTORY_TYPE_LABELS[a.inventory_type] || a.inventory_type },
+        { header: 'Estado', accessor: a => STATUS_LABELS[a.status] || a.status },
+        { header: 'Bodega', accessor: a => labels[a.module] || a.module },
+        { header: 'Área', accessor: a => a.area || '' },
+        { header: 'Responsable', accessor: a => a.responsible_name || '' },
+        { header: 'Precio Compra (COP)', accessor: a => a.purchase_price || 0 },
+        { header: 'Valor Estimado (COP)', accessor: a => a.estimated_value || 0 },
+        { header: 'Fecha Compra', accessor: a => a.purchase_date || '' },
+        { header: 'Origen Valor', accessor: a => a.value_source || '' },
+      ],
+      filteredAssets
+    );
+  };
+
   // Si no es admin, no puede ver esto
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -103,6 +128,15 @@ const Accounting = () => {
             Resumen financiero de activos en {labels[module] ?? module}
           </p>
         </div>
+        <button
+          className="btn btn-primary flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+          onClick={handleExportCsv}
+          disabled={filteredAssets.length === 0}
+          title="Descargar reporte compatible con Excel / Calc"
+        >
+          <Download size={18} />
+          Exportar a Excel ({filteredAssets.length})
+        </button>
       </div>
 
       {error && (

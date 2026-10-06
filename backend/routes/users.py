@@ -31,12 +31,36 @@ def _assert_scoped_admin_can_assign(admin: "models.User", role: "models.RoleEnum
         raise HTTPException(status_code=403, detail="No podés otorgar acceso a una bodega que vos mismo no administrás")
 
 
+def validate_corporate_email(email: str = None) -> None:
+    if not email:
+        return
+    email = email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Formato de correo electrónico inválido")
+    domain = email.split("@")[-1]
+    allowed = [
+        "elitenutrition.com.co",
+        "elitenovagroup.com",
+        "futupro.com",
+        "futupro.com.co",
+        "futupro.co",
+        "example.com",
+    ]
+    if domain not in allowed and not any(domain.endswith("." + d) for d in allowed):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se permiten correos corporativos oficiales (@elitenutrition.com.co, @futupro.com, @elitenovagroup.com)"
+        )
+
+
 @router.post("/users/", response_model=schemas.User)
 def create_user(
     user: schemas.UserCreate,
     db: Session = Depends(get_db),
     _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
 ):
+    validate_corporate_email(user.email)
+
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username ya registrado")
@@ -156,7 +180,7 @@ def delete_user(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     if user.id == _admin.id:
-        raise HTTPException(status_code=400, detail="No podés borrar tu propio usuario")
+        raise HTTPException(status_code=400, detail="No podés deshabilitar tu propio usuario")
 
     if not auth_service.is_master_admin(_admin):
         own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
@@ -164,40 +188,87 @@ def delete_user(
         if not (own_keys & target_keys):
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # Borrado en cascada de entidades pertenecientes al usuario
+    # Validación de integridad de custodia: verificar si tiene préstamos activos
+    active_loans = db.query(models.Loan).filter(
+        models.Loan.borrower_id == user.id,
+        models.Loan.status.in_([models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED])
+    ).count()
+    if active_loans > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede deshabilitar al usuario '{user.full_name}' porque tiene {active_loans} préstamo(s) activo(s). Debe registrar la devolución en portería antes de darlo de baja."
+        )
 
-    # 1. Obtener los IDs de las solicitudes del usuario para borrar sus comentarios primero
-    user_requests = db.query(models.AssetRequest.id).filter(models.AssetRequest.requester_id == user.id).all()
-    user_request_ids = [r[0] for r in user_requests]
-    if user_request_ids:
-        db.query(models.RequestComment).filter(models.RequestComment.asset_request_id.in_(user_request_ids)).delete(synchronize_session=False)
+    # Verificar si tiene asignaciones activas
+    active_assignments = db.query(models.AssetAssignment).filter(
+        models.AssetAssignment.user_id == user.id,
+        models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+    ).count()
+    if active_assignments > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede deshabilitar al usuario '{user.full_name}' porque tiene {active_assignments} asignación(es) activa(s). Debe revocar las asignaciones antes de darlo de baja."
+        )
 
-    # 2. Obtener los IDs de los préstamos del usuario para desenlazar AssetRequests que apunten a ellos
-    user_loans = db.query(models.Loan.id).filter(models.Loan.borrower_id == user.id).all()
-    user_loan_ids = [l[0] for l in user_loans]
-    if user_loan_ids:
-        db.query(models.AssetRequest).filter(models.AssetRequest.resulting_loan_id.in_(user_loan_ids)).update({models.AssetRequest.resulting_loan_id: None}, synchronize_session=False)
+    # SOFT DELETE: Inactivar usuario sin destruir historial de préstamos, asignaciones ni firmas
+    user.is_active = False
 
-    # 3. Borrar los comentarios donde el usuario fue el autor
-    db.query(models.RequestComment).filter(models.RequestComment.author_id == user.id).delete(synchronize_session=False)
-    
-    # 4. Borrar entidades base
-    db.query(models.AssetRequest).filter(models.AssetRequest.requester_id == user.id).delete(synchronize_session=False)
-    db.query(models.Loan).filter(models.Loan.borrower_id == user.id).delete(synchronize_session=False)
-    db.query(models.AssetAssignment).filter(models.AssetAssignment.user_id == user.id).delete(synchronize_session=False)
-
-    # 5. Limpiar referencias donde el usuario actuó como admin o aprobador (poner en NULL)
-    db.query(models.Loan).filter(models.Loan.approver_id == user.id).update({models.Loan.approver_id: None}, synchronize_session=False)
-    db.query(models.AssetRequest).filter(models.AssetRequest.reviewed_by_id == user.id).update({models.AssetRequest.reviewed_by_id: None}, synchronize_session=False)
-    db.query(models.AssetAssignment).filter(models.AssetAssignment.authorized_by_id == user.id).update({models.AssetAssignment.authorized_by_id: None}, synchronize_session=False)
-    db.query(models.ActivityLog).filter(models.ActivityLog.actor_id == user.id).update({models.ActivityLog.actor_id: None}, synchronize_session=False)
-
+    # Invalida todas las sesiones del usuario inmediatamente
     db.query(models.AuthToken).filter(models.AuthToken.user_id == user.id).delete()
-    user.warehouses = []
-    db.delete(user)
-    audit.log_action(db, _admin, "user.deleted", f"{_admin.full_name} borró al usuario {user.full_name}", entity_type="user", entity_id=user_id)
+
+    audit.log_action(db, _admin, "user.deactivated", f"{_admin.full_name} deshabilitó al usuario {user.full_name}", entity_type="user", entity_id=user_id)
     db.commit()
     return None
+
+
+@router.patch("/users/{user_id}/toggle-active", response_model=schemas.User)
+def toggle_user_active(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user.id == _admin.id:
+        raise HTTPException(status_code=400, detail="No podés modificar el estado de tu propio usuario")
+
+    if not auth_service.is_master_admin(_admin):
+        own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
+        target_keys = {w.key for w in user.warehouses}
+        if not (own_keys & target_keys):
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user.is_active:
+        # Validar préstamos y asignaciones antes de deshabilitar
+        active_loans = db.query(models.Loan).filter(
+            models.Loan.borrower_id == user.id,
+            models.Loan.status.in_([models.LoanStatusEnum.CHECKED_OUT, models.LoanStatusEnum.APPROVED])
+        ).count()
+        if active_loans > 0:
+            raise HTTPException(status_code=400, detail=f"No se puede deshabilitar porque tiene {active_loans} préstamo(s) activo(s).")
+
+        active_assignments = db.query(models.AssetAssignment).filter(
+            models.AssetAssignment.user_id == user.id,
+            models.AssetAssignment.status == models.AssignmentStatusEnum.ACTIVE
+        ).count()
+        if active_assignments > 0:
+            raise HTTPException(status_code=400, detail=f"No se puede deshabilitar porque tiene {active_assignments} asignación(es) activa(s).")
+
+        user.is_active = False
+        db.query(models.AuthToken).filter(models.AuthToken.user_id == user.id).delete()
+        action_name = "user.deactivated"
+        action_desc = f"{_admin.full_name} deshabilitó al usuario {user.full_name}"
+    else:
+        user.is_active = True
+        action_name = "user.reactivated"
+        action_desc = f"{_admin.full_name} reactivó al usuario {user.full_name}"
+
+    audit.log_action(db, _admin, action_name, action_desc, entity_type="user", entity_id=user.id)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.get("/role-permissions/", response_model=List[schemas.RolePermission])

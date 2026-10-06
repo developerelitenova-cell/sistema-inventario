@@ -13,6 +13,8 @@ router = APIRouter(prefix="/activity-logs", tags=["Auditoría"])
 @router.get("/", response_model=List[schemas.ActivityLog])
 def get_activity_logs(
     entity_type: Optional[str] = None,
+    action: Optional[str] = None,
+    search: Optional[str] = None,
     actor_id: Optional[int] = None,
     limit: int = 100,
     offset: int = 0,
@@ -26,6 +28,10 @@ def get_activity_logs(
 
     if entity_type:
         query = query.filter(models.ActivityLog.entity_type == entity_type)
+    if action:
+        query = query.filter(models.ActivityLog.action.ilike(f"%{action.strip()}%"))
+    if search:
+        query = query.filter(models.ActivityLog.description.ilike(f"%{search.strip()}%"))
     if actor_id:
         query = query.filter(models.ActivityLog.actor_id == actor_id)
 

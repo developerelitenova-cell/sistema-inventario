@@ -72,6 +72,9 @@ class BasicRateLimitMiddleware(BaseHTTPMiddleware):
         self.ip_records = {}
 
     async def dispatch(self, request: Request, call_next):
+        if os.environ.get("TESTING") == "1":
+            return await call_next(request)
+
         path = request.url.path
         if path.startswith("/auth/login") or path.startswith("/assets/estimate") or path.startswith("/api/assets/estimate"):
             ip = request.client.host
