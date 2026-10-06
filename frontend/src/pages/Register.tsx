@@ -74,32 +74,50 @@ export default function Register() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
 
-  // Signature logic
+  // Signature logic con escala responsiva para móviles
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const isTouch = 'touches' in e;
+    const clientX = isTouch ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = isTouch ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        const { x, y } = getCoordinates(e);
         ctx.beginPath();
-        ctx.moveTo(clientX - rect.left, clientY - rect.top);
+        ctx.moveTo(x, y);
       }
     }
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
+    if ('touches' in e && e.cancelable) {
+      e.preventDefault();
+    }
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-        ctx.lineTo(clientX - rect.left, clientY - rect.top);
+        const { x, y } = getCoordinates(e);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineTo(x, y);
         ctx.stroke();
       }
     }
@@ -192,23 +210,29 @@ export default function Register() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <div className="liquid-glass p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
+    <div className="p-3 sm:p-5 md:p-8 max-w-4xl mx-auto">
+      <div className="liquid-glass p-4 sm:p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
         <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3">
+            <img src="/logo_elite_nutrition.jpeg" alt="Elite Nutrition" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain rounded" />
+            <div className="h-6 w-px bg-slate-300" />
+            <img src="/logo_futupro.png" alt="FutuPro" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain" />
+          </div>
           <p className="text-xs uppercase tracking-widest font-bold text-[var(--gold)] mb-1">Elite Nutrition · FutuPro</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Registro de Colaborador</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">Registro de Colaborador</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Ingresa tus datos personales, fotografía y firma digital</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           
           {/* Datos Personales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
               <input 
                 type="text" 
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.full_name}
                 onChange={e => setFormData({...formData, full_name: e.target.value})}
               />
@@ -218,7 +242,7 @@ export default function Register() {
               <input 
                 type="text" 
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.document_id}
                 onChange={e => setFormData({...formData, document_id: e.target.value})}
               />
@@ -229,7 +253,7 @@ export default function Register() {
                 type="email" 
                 required
                 placeholder="usuario@elitenutrition.com.co o @futupro.com"
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.email}
                 onChange={e => handleEmailChange(e.target.value)}
               />
@@ -238,7 +262,7 @@ export default function Register() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Empresa a la que perteneces</label>
               <select
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
                 value={formData.warehouse_key}
                 onChange={e => setFormData(prev => ({...prev, warehouse_key: e.target.value}))}
               >
@@ -255,7 +279,7 @@ export default function Register() {
               <input 
                 type="text" 
                 placeholder="Ej. Mercadeo, Diseñador, Asesor, Bodega, etc."
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)]"
                 value={formData.cargo}
                 onChange={e => setFormData(prev => ({...prev, cargo: e.target.value}))}
               />
@@ -263,7 +287,7 @@ export default function Register() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Rol Operativo</label>
               <select
-                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 font-medium focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[rgba(176,141,87,0.15)] cursor-pointer"
                 value={formData.role}
                 onChange={e => setFormData(prev => ({...prev, role: e.target.value as "empleado" | "salida" | "encargado"}))}
               >
@@ -274,17 +298,28 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-6 sm:mt-8">
             {/* Foto */}
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Camera className="w-5 h-5 mr-2 text-[var(--gold)]" /> Fotografía</h3>
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl border border-slate-200">
+              <h3 className="text-lg sm:text-xl text-slate-900 font-semibold mb-3 flex items-center">
+                <Camera className="w-5 h-5 mr-2 text-[var(--gold)] shrink-0" /> Fotografía
+              </h3>
               <CameraCapture photo={photo} onCapture={setPhoto} onRetake={() => setPhoto(null)} aspect="1 / 1" />
             </div>
 
             {/* Firma */}
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="text-xl text-slate-900 font-semibold mb-4 flex items-center"><Pencil className="w-5 h-5 mr-2 text-[var(--gold)]" /> Firma Digital</h3>
-              <div className="bg-white rounded-lg overflow-hidden mb-4 relative shadow-inner border border-slate-300" style={{ height: '300px' }}>
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg sm:text-xl text-slate-900 font-semibold flex items-center">
+                  <Pencil className="w-5 h-5 mr-2 text-[var(--gold)] shrink-0" /> Firma Digital
+                </h3>
+                {signature && (
+                  <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Guardada
+                  </span>
+                )}
+              </div>
+              <div className="bg-white rounded-lg overflow-hidden mb-4 relative shadow-inner border border-slate-300 h-52 sm:h-64">
                 <canvas 
                   ref={canvasRef}
                   width={400}
@@ -299,23 +334,23 @@ export default function Register() {
                   onTouchEnd={stopDrawing}
                 />
               </div>
-              <div className="flex space-x-4">
-                <button type="button" onClick={clearSignature} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors">
+              <div className="flex gap-3">
+                <button type="button" onClick={clearSignature} className="flex-1 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 py-2.5 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base">
                   Limpiar
                 </button>
-                <button type="button" onClick={saveSignature} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium flex items-center justify-center transition-colors">
-                  <Check className="w-5 h-5 mr-2" /> Confirmar
+                <button type="button" onClick={saveSignature} className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white py-2.5 sm:py-3 rounded-lg font-medium flex items-center justify-center transition-colors text-sm sm:text-base">
+                  <Check className="w-4 h-4 mr-1.5" /> Confirmar
                 </button>
               </div>
             </div>
           </div>
 
-          {submitError && <p className="text-red-500 text-sm text-center font-medium">{submitError}</p>}
+          {submitError && <p className="text-red-500 text-sm text-center font-medium bg-red-50 p-3 rounded-lg border border-red-200">{submitError}</p>}
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-4 rounded-xl font-bold text-lg mt-8 shadow-[0_0_20px_rgba(176,141,87,0.4)] disabled:opacity-60"
+            className="w-full bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg mt-6 shadow-[0_0_20px_rgba(176,141,87,0.4)] disabled:opacity-60 transition-all cursor-pointer"
           >
             {submitting ? "Creando perfil..." : "Completar Registro"}
           </button>
