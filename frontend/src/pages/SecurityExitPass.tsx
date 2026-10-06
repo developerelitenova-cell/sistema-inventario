@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getLoan, checkoutLoanSecurity, type Loan } from '../api';
 import { CheckCircle, Shield, Check } from 'lucide-react';
-import { formatBogotaTime } from '../utils/dateUtils';
+import { formatBogotaTime, formatBogotaDate } from '../utils/dateUtils';
 
 export default function SecurityExitPass() {
   const { id } = useParams<{ id: string }>();
@@ -151,7 +151,7 @@ export default function SecurityExitPass() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-slate-500">Fecha Solicitud</p>
-                  <p className="text-slate-800">{new Date(loan.request_date).toLocaleDateString()}</p>
+                  <p className="text-slate-800">{formatBogotaDate(loan.request_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Estado Préstamo</p>

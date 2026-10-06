@@ -18,6 +18,7 @@ import RequestLoanModal from '../components/RequestLoanModal';
 import RequestCommentThread from '../components/RequestCommentThread';
 import ReturnAssetModal from '../components/ReturnAssetModal';
 import Pagination from '../components/Pagination';
+import { formatBogotaDate } from '../utils/dateUtils';
 
 const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente', assigned: 'Asignada', rejected: 'Rechazada',
@@ -244,7 +245,7 @@ const EmployeeRequestView = () => {
                   </div>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                     Código: {a.asset.unique_code} <br/>
-                    Vence: {new Date(a.expiration_date).toLocaleDateString()} <br/>
+                    Vence: {formatBogotaDate(a.expiration_date)} <br/>
                     {a.notes && <span>Nota: {a.notes}</span>}
                   </div>
                   {!a.is_accepted && (
@@ -267,7 +268,7 @@ const EmployeeRequestView = () => {
                   </div>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                     Código: {l.asset.unique_code} <br/>
-                    Aprobado: {l.approval_date ? new Date(l.approval_date).toLocaleDateString() : 'Pendiente'} <br/>
+                    Aprobado: {l.approval_date ? formatBogotaDate(l.approval_date) : 'Pendiente'} <br/>
                     Motivo: {l.reason}
                   </div>
                   {l.status === 'approved' && (

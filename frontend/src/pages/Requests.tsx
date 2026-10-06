@@ -12,6 +12,7 @@ import { useWarehouses } from '../warehouseContext';
 import UserProfileCard from '../components/UserProfileCard';
 import RequestCommentThread from '../components/RequestCommentThread';
 import Pagination from '../components/Pagination';
+import { formatBogotaDateTime, formatBogotaDate } from '../utils/dateUtils';
 
 type TabType = 'pending' | 'assigned' | 'rejected' | 'all';
 
@@ -353,7 +354,7 @@ const Requests = () => {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    <span>Fecha solicitud: {new Date(req.created_at).toLocaleString()}</span>
+                    <span>Fecha solicitud: {formatBogotaDateTime(req.created_at, true)}</span>
                     {req.module && (
                       <span>• Bodega: {labels[req.module] || req.module}</span>
                     )}
@@ -457,7 +458,7 @@ const Requests = () => {
                         <strong>Asignado por:</strong> {req.reviewed_by?.full_name || 'Administrador'}
                       </div>
                       <div>
-                        <strong>Fecha de entrega:</strong> {req.reviewed_at ? new Date(req.reviewed_at).toLocaleDateString() : '—'}
+                        <strong>Fecha de entrega:</strong> {req.reviewed_at ? formatBogotaDate(req.reviewed_at) : '—'}
                       </div>
                     </div>
 
@@ -502,7 +503,7 @@ const Requests = () => {
                         <XCircle size={15} /> Solicitud Rechazada
                       </span>
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        {req.reviewed_at ? new Date(req.reviewed_at).toLocaleString() : ''}
+                        {req.reviewed_at ? formatBogotaDateTime(req.reviewed_at, true) : ''}
                       </span>
                     </div>
                     <div style={{ color: 'var(--text-secondary)' }}>
