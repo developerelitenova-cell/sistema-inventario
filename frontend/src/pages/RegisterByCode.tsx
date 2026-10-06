@@ -1,12 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ScanLine, Search } from 'lucide-react';
+import { ScanLine, Search, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
 import { getAssetByCode, type Asset } from '../api';
 import AssetEditModal from '../components/AssetEditModal';
 
+const getNextSequentialCode = (code: string): string | null => {
+  const match = code.match(/^([A-Za-z]+-?)(\d+)$/);
+  if (!match) return null;
+  const prefix = match[1];
+  const digits = match[2];
+  const nextNum = parseInt(digits, 10) + 1;
+  const nextDigits = String(nextNum).padStart(digits.length, '0');
+  return `${prefix}${nextDigits}`;
+};
+
 const RegisterByCode = () => {
-  const [manualCode, setManualCode] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const codeParam = searchParams.get('code');
+
+  const [manualCode, setManualCode] = useState(codeParam || '');
   const [foundAsset, setFoundAsset] = useState<Asset | null>(null);
+  const [lastSaved, setLastSaved] = useState<{ code: string; nextCode: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
@@ -17,10 +32,21 @@ const RegisterByCode = () => {
     setLoading(true);
     setError(null);
     getAssetByCode(trimmed)
-      .then(setFoundAsset)
+      .then((asset) => {
+        setFoundAsset(asset);
+        setManualCode(trimmed);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   };
+
+  // Carga automática si viene ?code= en la URL
+  useEffect(() => {
+    if (codeParam) {
+      setManualCode(codeParam);
+      lookupCode(codeParam);
+    }
+  }, [codeParam]);
 
   useEffect(() => {
     if (foundAsset) return; // no re-inicializar la cámara mientras el modal está abierto
@@ -62,22 +88,76 @@ const RegisterByCode = () => {
     lookupCode(manualCode);
   };
 
+  const handleSaved = (savedAsset: Asset) => {
+    const next = getNextSequentialCode(savedAsset.unique_code);
+    setLastSaved({ code: savedAsset.unique_code, nextCode: next });
+    setFoundAsset(null);
+    setError(null);
+    if (next) {
+      setManualCode(next);
+      setSearchParams({ code: next });
+    } else {
+      setManualCode('');
+      setSearchParams({});
+    }
+  };
+
   const resetScan = () => {
     setFoundAsset(null);
-    setManualCode('');
     setError(null);
   };
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '600px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '640px', margin: '0 auto' }}>
       <div className="header" style={{ justifyContent: 'center', textAlign: 'center' }}>
         <div>
           <h1 className="title">Registrar por Código</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Escaneá el sticker ya pegado en el activo para completar su registro.
+            Escaneá o ingresá el sticker generado para dar de alta el activo físico en secuencia.
           </p>
         </div>
       </div>
+
+      {/* Banner de confirmación secuencial al guardar */}
+      {lastSaved && (
+        <div
+          className="glass-panel"
+          style={{
+            background: 'rgba(52, 199, 89, 0.12)',
+            border: '1px solid rgba(52, 199, 89, 0.35)',
+            marginBottom: '20px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ color: 'var(--success)', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={20} />
+                ¡Activo {lastSaved.code} dado de alta exitosamente!
+              </div>
+              {lastSaved.nextCode && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Siguiente código correlativo en orden: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{lastSaved.nextCode}</strong>
+                </div>
+              )}
+            </div>
+
+            {lastSaved.nextCode && (
+              <button
+                className="btn btn-primary"
+                onClick={() => lookupCode(lastSaved.nextCode!)}
+                disabled={loading}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}
+              >
+                <Sparkles size={16} />
+                Registrar Siguiente ({lastSaved.nextCode})
+                <ArrowRight size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', marginBottom: '16px' }}>
         <div id="register-reader" style={{ width: '100%', border: 'none' }}></div>
@@ -89,29 +169,31 @@ const RegisterByCode = () => {
 
       <form onSubmit={handleManualSubmit} className="glass-panel" style={{ display: 'flex', gap: '12px', padding: '16px' }}>
         <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-secondary)' }} />
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
           <input
             className="input-field"
             style={{ paddingLeft: '38px' }}
-            placeholder="O escribí el código manualmente (ej. EN-0001)"
+            placeholder="O escribí el código manualmente (ej. FU-0301 o EE-0001)"
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
           />
         </div>
         <button className="btn btn-primary" type="submit" disabled={loading || !manualCode.trim()}>
-          Buscar
+          {loading ? 'Buscando...' : 'Buscar Código'}
         </button>
       </form>
 
       {error && (
-        <p style={{ color: 'var(--danger-color)', marginTop: '16px', textAlign: 'center' }}>{error}</p>
+        <div className="glass-panel" style={{ color: 'var(--danger-color)', marginTop: '16px', textAlign: 'center', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.3)' }}>
+          {error}
+        </div>
       )}
 
       {foundAsset && (
         <AssetEditModal
           asset={foundAsset}
           onClose={resetScan}
-          onSaved={resetScan}
+          onSaved={handleSaved}
         />
       )}
 

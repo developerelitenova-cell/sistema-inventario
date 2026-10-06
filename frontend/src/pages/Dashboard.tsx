@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles, Building2, Car } from 'lucide-react';
+import { Search, Pencil, Send, Info, CornerDownLeft, Download, Image as ImageIcon, Sparkles, Building2, Car, Package, QrCode, ArrowRight } from 'lucide-react';
 import {
   getAssets, formatCOP, STATUS_LABELS, CATEGORY_LABELS,
   createAssetRequest, getMyAssetRequests, getAssetAvailability, INVENTORY_TYPE_LABELS,
@@ -298,6 +298,7 @@ const CatalogView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [catalogSection, setCatalogSection] = useState<'registered' | 'pending'>('registered');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [viewingAsset, setViewingAsset] = useState<Asset | null>(null);
   const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
@@ -310,7 +311,7 @@ const CatalogView = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [module, searchTerm, inventoryType, statusFilter]);
+  }, [module, searchTerm, inventoryType, statusFilter, catalogSection]);
 
   const loadAssets = () => {
     if (!module) return;
@@ -338,9 +339,51 @@ const CatalogView = () => {
     }
   };
 
+  // Separación neta: Activos registrados físicamente vs Stickers/Códigos pendientes por dar de alta
+  const registeredAssetsAll = assets.filter(a => a.status !== 'pending_registration');
+  const pendingAssetsAll = assets.filter(a => a.status === 'pending_registration');
+
+  // Orden numérico secuencial correlativo (ej: FU-0301, FU-0302...)
+  const sortedPendingAssets = [...pendingAssetsAll].sort((a, b) =>
+    a.unique_code.localeCompare(b.unique_code, undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  const nextPendingCode = sortedPendingAssets[0]?.unique_code;
+
+  // Filtrado para pestaña de Activos Registrados
+  const filteredRegisteredAssets = registeredAssetsAll
+    .filter(a => {
+      const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+      const matchesType = inventoryType === 'ALL' || a.inventory_type === inventoryType;
+      const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    })
+    .sort((a, b) =>
+      a.unique_code.localeCompare(b.unique_code, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
+  // Filtrado para pestaña de Códigos Pendientes
+  const filteredPendingAssets = sortedPendingAssets.filter(a =>
+    a.unique_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const activeItems = catalogSection === 'registered' ? filteredRegisteredAssets : filteredPendingAssets;
+
+  const paginatedItems = activeItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const handleExportCsv = () => {
+    const filename = catalogSection === 'registered'
+      ? `activos_registrados_${module}_${new Date().toISOString().split('T')[0]}`
+      : `codigos_pendientes_${module}_${new Date().toISOString().split('T')[0]}`;
+
     exportToCsv<Asset>(
-      `catalogo_activos_${module}_${new Date().toISOString().split('T')[0]}`,
+      filename,
       [
         { header: 'Código Único', accessor: a => a.unique_code },
         { header: 'Descripción', accessor: a => a.description || '' },
@@ -353,36 +396,14 @@ const CatalogView = () => {
         { header: 'Valor Estimado (COP)', accessor: a => a.estimated_value || '' },
         { header: 'Categoría', accessor: a => (a.category ? (CATEGORY_LABELS[a.category] || a.category) : '') },
       ],
-      filteredAssets
+      activeItems
     );
   };
 
-  const availableCount = assets.filter(a => a.status === 'available').length;
-  const assignedCount = assets.filter(a => a.status === 'assigned').length;
-  const loanedCount = assets.filter(a => a.status === 'loaned').length;
-  const maintenanceCount = assets.filter(a => a.status === 'maintenance').length;
-  const pendingCount = assets.filter(a => a.status === 'pending_registration').length;
-
-  // Orden natural secuencial numérico por código correlativo (ej. EE-0001, EE-0002)
-  const filteredAssets = assets
-    .filter(a => {
-      const matchesSearch = (a.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.unique_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (a.area?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-        (a.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-      
-      const matchesType = inventoryType === 'ALL' || a.inventory_type === inventoryType;
-      const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
-    })
-    .sort((a, b) =>
-      a.unique_code.localeCompare(b.unique_code, undefined, { numeric: true, sensitivity: 'base' })
-    );
-
-  const paginatedAssets = filteredAssets.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const availableCount = registeredAssetsAll.filter(a => a.status === 'available').length;
+  const assignedCount = registeredAssetsAll.filter(a => a.status === 'assigned').length;
+  const loanedCount = registeredAssetsAll.filter(a => a.status === 'loaned').length;
+  const maintenanceCount = registeredAssetsAll.filter(a => a.status === 'maintenance').length;
 
   return (
     <div className="animate-fade-in">
@@ -390,90 +411,178 @@ const CatalogView = () => {
         <div>
           <h1 className="title">Catálogo de Activos · {labels[module] || module}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            {loading ? 'Cargando inventario...' : `${filteredAssets.length} activos listados en orden secuencial`}
+            {catalogSection === 'registered'
+              ? `${registeredAssetsAll.length} activos dados de alta y listos en inventario`
+              : `${pendingAssetsAll.length} stickers generados esperando registro físico`}
           </p>
         </div>
         <button
           className="btn btn-primary"
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           onClick={handleExportCsv}
-          disabled={filteredAssets.length === 0}
-          title="Descargar catálogo en formato compatible con Excel"
+          disabled={activeItems.length === 0}
+          title="Descargar listado en formato compatible con Excel"
         >
           <Download size={18} />
-          Exportar a Excel ({filteredAssets.length})
+          Exportar a Excel ({activeItems.length})
         </button>
       </div>
 
-      <div style={{ marginBottom: '24px', position: 'relative', maxWidth: '400px' }}>
+      {/* PESTAÑAS PRINCIPALES: Separación radical de Activos vs Códigos Pendientes */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+        <button
+          className={`btn ${catalogSection === 'registered' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', padding: '10px 18px' }}
+          onClick={() => setCatalogSection('registered')}
+        >
+          <Package size={18} />
+          <span>Activos Registrados</span>
+          <span style={{
+            background: catalogSection === 'registered' ? 'rgba(0,0,0,0.25)' : 'var(--surface-color)',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: 700
+          }}>
+            {registeredAssetsAll.length}
+          </span>
+        </button>
+
+        <button
+          className={`btn ${catalogSection === 'pending' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', padding: '10px 18px' }}
+          onClick={() => setCatalogSection('pending')}
+        >
+          <QrCode size={18} />
+          <span>Códigos Pendientes de Registro</span>
+          <span style={{
+            background: catalogSection === 'pending' ? 'rgba(0,0,0,0.25)' : 'rgba(212, 160, 23, 0.2)',
+            color: catalogSection === 'pending' ? '#fff' : 'var(--gold)',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: 700
+          }}>
+            {pendingAssetsAll.length}
+          </span>
+        </button>
+      </div>
+
+      {/* BANNER PARA FLUJO SECUENCIAL CUANDO SE ENCUENTRA EN CÓDIGOS PENDIENTES */}
+      {catalogSection === 'pending' && (
+        <div
+          className="glass-panel"
+          style={{
+            marginBottom: '24px',
+            padding: '20px 24px',
+            background: 'linear-gradient(135deg, rgba(212, 160, 23, 0.08) 0%, rgba(212, 160, 23, 0.02) 100%)',
+            border: '1px solid rgba(212, 160, 23, 0.25)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)', fontWeight: 700, fontSize: '1.05rem', marginBottom: '4px' }}>
+              <Sparkles size={20} /> Rotulación y Registro en Secuencia Continua
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
+              Los códigos están organizados estrictamente en orden numérico correlativo. Podés registrarlos uno tras otro en esa misma secuencia para rotular los activos físicos.
+            </p>
+          </div>
+
+          {nextPendingCode && (
+            <Link
+              to={`/assets/register-by-code?code=${nextPendingCode}`}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', padding: '10px 20px', fontWeight: 600 }}
+            >
+              <span>Registrar Siguiente en Secuencia ({nextPendingCode})</span>
+              <ArrowRight size={18} />
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* BUSCADOR */}
+      <div style={{ marginBottom: '20px', position: 'relative', maxWidth: '440px' }}>
         <Search size={20} style={{ position: 'absolute', left: '16px', top: '12px', color: 'var(--text-secondary)' }} />
         <input
           type="text"
           className="input-field"
-          placeholder="Buscar por código, descripción, área o responsable..."
+          placeholder={catalogSection === 'registered' ? "Buscar por código, descripción, área o responsable..." : "Buscar código específico (ej. FU-0301)..."}
           style={{ paddingLeft: '44px' }}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Filtros por Estado con Contadores */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {[
-          { key: 'ALL', label: `Todos (${assets.length})` },
-          { key: 'available', label: `Disponibles (${availableCount})` },
-          { key: 'assigned', label: `Asignados (${assignedCount})` },
-          { key: 'loaned', label: `En Préstamo (${loanedCount})` },
-          { key: 'maintenance', label: `Mantenimiento (${maintenanceCount})` },
-          { key: 'pending_registration', label: `⏳ En Espera de Registro (${pendingCount})` },
-        ].map(item => (
-          <button
-            key={item.key}
-            className={`btn ${statusFilter === item.key ? 'btn-primary' : 'btn-outline'}`}
-            style={{ fontSize: '0.85rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
-            onClick={() => setStatusFilter(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {/* SUBFILTROS: Solo para Activos Registrados */}
+      {catalogSection === 'registered' && (
+        <>
+          {/* Filtros por Estado con Contadores */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {[
+              { key: 'ALL', label: `Todos (${registeredAssetsAll.length})` },
+              { key: 'available', label: `Disponibles (${availableCount})` },
+              { key: 'assigned', label: `Asignados (${assignedCount})` },
+              { key: 'loaned', label: `En Préstamo (${loanedCount})` },
+              { key: 'maintenance', label: `Mantenimiento (${maintenanceCount})` },
+            ].map(item => (
+              <button
+                key={item.key}
+                className={`btn ${statusFilter === item.key ? 'btn-primary' : 'btn-outline'}`}
+                style={{ fontSize: '0.85rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
+                onClick={() => setStatusFilter(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Filtros por Tipo de Inventario */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
-        <button
-          className={`btn ${inventoryType === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-          onClick={() => setInventoryType('ALL')}
-        >
-          Todos los Tipos
-        </button>
-        {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
-          <button
-            key={key}
-            className={`btn ${inventoryType === key ? 'btn-primary' : 'btn-outline'}`}
-            style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-            onClick={() => setInventoryType(key as InventoryType)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+          {/* Filtros por Tipo de Inventario */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+            <button
+              className={`btn ${inventoryType === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+              style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+              onClick={() => setInventoryType('ALL')}
+            >
+              Todos los Tipos
+            </button>
+            {Object.entries(INVENTORY_TYPE_LABELS).map(([key, label]) => (
+              <button
+                key={key}
+                className={`btn ${inventoryType === key ? 'btn-primary' : 'btn-outline'}`}
+                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+                onClick={() => setInventoryType(key as InventoryType)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          Cargando activos...
+          Cargando inventario...
         </div>
       ) : error ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--danger-color)' }}>
           Error al cargar activos: {error}
         </div>
-      ) : filteredAssets.length === 0 ? (
+      ) : activeItems.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          No se encontraron activos con los filtros aplicados.
+          {catalogSection === 'registered'
+            ? 'No se encontraron activos registrados con los filtros aplicados.'
+            : 'No hay códigos pendientes de registro que coincidan con la búsqueda.'}
         </div>
-      ) : (
+      ) : catalogSection === 'registered' ? (
+        /* VISTA DE ACTIVOS REGISTRADOS */
         <div className="grid-cards">
-          {paginatedAssets.map(asset => (
+          {paginatedItems.map(asset => (
             <div key={asset.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -511,7 +620,7 @@ const CatalogView = () => {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>{asset.unique_code}</div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {asset.description ?? 'Pendiente de registro'}
+                      {asset.description || 'Activo Registrado'}
                     </h3>
                   </div>
                 </div>
@@ -572,34 +681,97 @@ const CatalogView = () => {
               </div>
 
               <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
-                {asset.status === 'pending_registration' ? (
-                  <Link
-                    to={`/assets/register-by-code?code=${asset.unique_code}`}
-                    className="btn btn-primary"
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem', textDecoration: 'none' }}
+                <button
+                  className="btn btn-outline"
+                  style={{ width: '100%' }}
+                  disabled={asset.status !== 'available'}
+                  onClick={() => setRequestingAsset(asset)}
+                >
+                  Solicitar Préstamo
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* VISTA DE CÓDIGOS PENDIENTES DE REGISTRO EN SECUENCIA */
+        <div className="grid-cards">
+          {paginatedItems.map(asset => (
+            <div
+              key={asset.id}
+              className="glass-panel"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                borderLeft: '4px solid var(--gold)',
+                background: 'rgba(255, 255, 255, 0.03)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '8px',
+                      background: 'rgba(212, 160, 23, 0.12)',
+                      border: '1px solid rgba(212, 160, 23, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--gold)'
+                    }}
                   >
-                    <Sparkles size={16} /> Completar Registro de Activo
-                  </Link>
-                ) : (
-                  <button
-                    className="btn btn-outline"
-                    style={{ width: '100%' }}
-                    disabled={asset.status !== 'available'}
-                    onClick={() => setRequestingAsset(asset)}
-                  >
-                    Solicitar Préstamo
-                  </button>
-                )}
+                    <QrCode size={22} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Sticker Generado
+                    </span>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                      {asset.unique_code}
+                    </h3>
+                  </div>
+                </div>
+
+                <span className="badge badge-pending_registration" style={{ fontSize: '0.75rem' }}>
+                  Por Rotular
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Empresa/Bodega:</span> {labels[asset.module || module] || asset.module || module}</div>
+                <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>Estado:</span> En espera de asignación física</div>
+              </div>
+
+              <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }}>
+                <Link
+                  to={`/assets/register-by-code?code=${asset.unique_code}`}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '0.88rem',
+                    textDecoration: 'none',
+                    fontWeight: 600
+                  }}
+                >
+                  <Sparkles size={16} /> Dar de Alta / Registrar {asset.unique_code}
+                </Link>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {!loading && !error && filteredAssets.length > 0 && (
+      {!loading && !error && activeItems.length > 0 && (
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredAssets.length}
+          totalItems={activeItems.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
