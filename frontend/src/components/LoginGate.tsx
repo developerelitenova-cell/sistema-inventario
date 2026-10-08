@@ -69,9 +69,9 @@ const LoginGate = ({ children }: LoginGateProps) => {
         
         {/* Logos de las empresas */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' }}>
-          <img src="/logo_elite_nutrition.jpeg" alt="Elite Nutrition" style={{ height: '42px', maxWidth: '120px', objectFit: 'contain' }} />
+          <img src="/logo_elite_nutrition.jpeg" alt="Elite Nutrition" style={{ height: '42px', maxWidth: '120px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
           <div style={{ width: '1px', height: '32px', background: '#cbd5e1' }} />
-          <img src="/logo_futupro.png" alt="FutuPro" style={{ height: '38px', maxWidth: '120px', objectFit: 'contain' }} />
+          <img src="/logo_futupro.png" alt="FutuPro" style={{ height: '38px', maxWidth: '120px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
         </div>
 
         {/* Nombres de las empresas */}

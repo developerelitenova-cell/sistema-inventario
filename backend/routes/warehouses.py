@@ -75,3 +75,30 @@ def update_warehouse(
     db.commit()
     db.refresh(warehouse)
     return warehouse
+
+
+@router.delete("/{warehouse_id}", status_code=204)
+def delete_warehouse(
+    warehouse_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(auth_service.require_master_admin()),
+):
+    warehouse = db.query(models.Warehouse).filter(models.Warehouse.id == warehouse_id).first()
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Bodega no encontrada")
+
+    # Verificar si tiene activos
+    has_assets = db.query(models.Asset).filter(models.Asset.module == warehouse.key).first()
+    if has_assets:
+        raise HTTPException(status_code=400, detail="No se puede borrar esta bodega porque tiene activos asociados.")
+
+    # Verificar si tiene solicitudes
+    has_requests = db.query(models.AssetRequest).filter(models.AssetRequest.module == warehouse.key).first()
+    if has_requests:
+        raise HTTPException(status_code=400, detail="No se puede borrar esta bodega porque tiene solicitudes asociadas.")
+
+    audit.log_action(db, _admin, "warehouse.deleted", f"{_admin.full_name} borró la bodega {warehouse.name}", entity_type="warehouse", entity_id=warehouse.id)
+    
+    db.delete(warehouse)
+    db.commit()
+    return None

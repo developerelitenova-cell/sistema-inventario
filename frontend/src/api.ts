@@ -304,23 +304,11 @@ export interface Depreciation {
 export const getAssetDepreciation = (assetId: number) =>
   request<Depreciation>(`/assets/${assetId}/depreciation`);
 
-export const uploadAssetPhoto = async (assetId: number, file: File): Promise<Asset> => {
-  const formData = new FormData();
-  formData.append('photo', file);
-  const token = getToken();
-  const res = await fetch(`${API_URL}/assets/${assetId}/photo`, {
+export const uploadAssetPhoto = async (assetId: number, photoDataUri: string): Promise<Asset> => {
+  return request<Asset>(`/assets/${assetId}/photo`, {
     method: 'POST',
-    headers: {
-      'X-App-Password': getPassword(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
+    body: JSON.stringify({ photo_data: photoDataUri }),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => null);
-    throw new Error(detail?.detail || `Error ${res.status} al subir la foto`);
-  }
-  return res.json();
 };
 
 export const verifyAsset = (code: string) =>
@@ -334,7 +322,7 @@ export const getLoan = (loanId: number) =>
 
 export const getUsers = () => request<User[]>('/users/');
 
-export const updateUser = (userId: number, update: Partial<{ cargo: string; role: Role; warehouse_keys: string[] }>) =>
+export const updateUser = (userId: number, update: Partial<{ cargo: string; role: Role; warehouse_keys: string[]; email: string }>) =>
   request<User>(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(update) });
 
 export interface UserCreateInput {
@@ -371,6 +359,9 @@ export const createWarehouse = (payload: { key: string; name: string }) =>
 
 export const updateWarehouse = (id: number, payload: Partial<{ name: string; is_active: boolean }>) =>
   request<Warehouse>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+
+export const deleteWarehouse = (id: number) =>
+  request<void>(`/warehouses/${id}`, { method: 'DELETE' });
 
 export const resetUserPassword = (userId: number) =>
   request<{ message: string; new_password: string }>(`/users/${userId}/reset-password`, { method: 'POST' });

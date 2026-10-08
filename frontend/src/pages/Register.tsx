@@ -214,9 +214,9 @@ export default function Register() {
       <div className="liquid-glass p-4 sm:p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3">
-            <img src="/logo_elite_nutrition.jpeg" alt="Elite Nutrition" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain rounded" />
+            <img src="/logo_elite_nutrition.jpeg" alt="Elite Nutrition" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain rounded" style={{ mixBlendMode: 'multiply' }} />
             <div className="h-6 w-px bg-slate-300" />
-            <img src="/logo_futupro.png" alt="FutuPro" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain" />
+            <img src="/logo_futupro.png" alt="FutuPro" className="h-8 sm:h-10 max-w-[100px] sm:max-w-[130px] object-contain" style={{ mixBlendMode: 'multiply' }} />
           </div>
           <p className="text-xs uppercase tracking-widest font-bold text-[var(--gold)] mb-1">Elite Nutrition · FutuPro</p>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">Registro de Colaborador</h1>

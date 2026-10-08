@@ -383,10 +383,13 @@ def update_asset(
     return asset
 
 
+class PhotoUploadRequest(BaseModel):
+    photo_data: str # Base64 data URI
+
 @router.post("/assets/{asset_id}/photo", response_model=schemas.Asset)
 async def upload_asset_photo(
     asset_id: int,
-    photo: UploadFile = File(...),
+    payload: PhotoUploadRequest,
     db: Session = Depends(get_db),
     _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
@@ -396,12 +399,9 @@ async def upload_asset_photo(
     if not auth_service.can_access_warehouse(_user, asset.module):
         raise HTTPException(status_code=403, detail="No podés editar la foto de este activo")
 
-    if photo.content_type not in ("image/jpeg", "image/png", "image/webp"):
-        raise HTTPException(status_code=400, detail="Formato de imagen no soportado (usar JPEG, PNG o WEBP)")
-
-    photo_bytes = await photo.read()
-    b64 = base64.b64encode(photo_bytes).decode()
-    data_uri = f"data:{photo.content_type};base64,{b64}"
+    data_uri = payload.photo_data
+    if not data_uri.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Formato de imagen inválido")
 
     uploaded_url = upload_base64_image(data_uri, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
     asset.photo_url = uploaded_url or data_uri  # si Supabase falla, al menos no se pierde la foto

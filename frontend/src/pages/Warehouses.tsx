@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, Building2, Save, X, Loader2 } from 'lucide-react';
+import { Plus, Building2, Save, X, Loader2, Trash2 } from 'lucide-react';
 import { useWarehouses } from '../warehouseContext';
-import { createWarehouse, isMasterAdmin } from '../api';
+import { createWarehouse, isMasterAdmin, deleteWarehouse } from '../api';
 import { getCachedUser } from '../components/LoginGate';
 
 export default function Warehouses() {
@@ -40,6 +40,18 @@ export default function Warehouses() {
       setError(err.message || 'Error al crear la bodega');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar la bodega "${name}"? Esta acción no se puede deshacer y fallará si tiene activos asociados.`)) {
+      return;
+    }
+    try {
+      await deleteWarehouse(id);
+      reload();
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar la bodega');
     }
   };
 
@@ -122,6 +134,7 @@ export default function Warehouses() {
               <th className="p-4 font-bold text-slate-600">Bodega</th>
               <th className="p-4 font-bold text-slate-600">Clave Interna</th>
               <th className="p-4 font-bold text-slate-600 text-center">Estado</th>
+              <th className="p-4 font-bold text-slate-600 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -147,6 +160,15 @@ export default function Warehouses() {
                     <span className={`px-2 py-1 rounded text-xs font-bold ${w.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
                       {w.is_active ? 'ACTIVA' : 'INACTIVA'}
                     </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button
+                      onClick={() => handleDelete(w.id, w.name)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar Bodega"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </td>
                 </tr>
               ))

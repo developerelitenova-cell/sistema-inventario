@@ -51,6 +51,7 @@ class UserUpdate(BaseModel):
     role: Optional[RoleEnum] = None
     warehouse_keys: Optional[List[str]] = None
     is_active: Optional[bool] = None
+    email: Optional[str] = None
 
 class RegisterRequest(BaseModel):
     full_name: str

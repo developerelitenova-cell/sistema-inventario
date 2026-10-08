@@ -20,6 +20,7 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
   const assignableRoles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => isMaster || r !== 'admin');
   const [warehouseKeys, setWarehouseKeys] = useState<string[]>(user.warehouses.map((w) => w.key));
   const [cargo, setCargo] = useState(user.cargo ?? '');
+  const [email, setEmail] = useState(user.email ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
       const saved = await updateUser(user.id, {
         warehouse_keys: warehouseKeys,
         cargo: cargo || undefined,
+        email: email || undefined,
         role,
       });
       onSaved(saved);
@@ -66,6 +68,17 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Correo Electrónico</div>
+            <input 
+              type="email" 
+              className="input-field" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="ejemplo@futupro.com" 
+            />
+          </label>
+
           <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Rol</div>
             <select className="input-field" value={role} onChange={(e) => setRole(e.target.value as Role)}>
