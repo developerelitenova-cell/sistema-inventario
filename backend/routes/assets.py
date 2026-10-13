@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
@@ -410,12 +410,14 @@ def update_asset(
 
 
 class PhotoUploadRequest(schemas.BaseModel):
-    photo_data: str # Base64 data URI
+    photo_data: Optional[str] = None # Base64 data URI
 
 @router.post("/assets/{asset_id}/photo", response_model=schemas.Asset)
 async def upload_asset_photo(
     asset_id: int,
-    payload: PhotoUploadRequest,
+    request: Request,
+    photo: Optional[UploadFile] = File(None),
+    payload: Optional[PhotoUploadRequest] = None,
     db: Session = Depends(get_db),
     _user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
@@ -425,13 +427,30 @@ async def upload_asset_photo(
     if not auth_service.can_access_warehouse(_user, asset.module):
         raise HTTPException(status_code=403, detail="No podés editar la foto de este activo")
 
-    data_uri = payload.photo_data
-    if not data_uri.startswith("data:image/"):
-        raise HTTPException(status_code=400, detail="Formato de imagen inválido")
+    data_uri = None
+    ct = request.headers.get("content-type", "")
+    if payload and payload.photo_data:
+        data_uri = payload.photo_data
+    elif "application/json" in ct:
+        try:
+            body = await request.json()
+            data_uri = body.get("photo_data")
+        except Exception:
+            pass
+    
+    if not data_uri and photo:
+        content = await photo.read()
+        mime = photo.content_type or "image/jpeg"
+        b64 = base64.b64encode(content).decode("utf-8")
+        data_uri = f"data:{mime};base64,{b64}"
+
+    if not data_uri or not data_uri.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Formato de imagen inválido o campo de foto faltante")
 
     uploaded_url = upload_base64_image(data_uri, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
     asset.photo_url = uploaded_url or data_uri  # si Supabase falla, al menos no se pierde la foto
 
+    audit.log_action(db, _user, "asset.photo_updated", f"{_user.full_name} actualizó la foto del activo {asset.unique_code}", entity_type="asset", entity_id=asset.id)
     db.commit()
     db.refresh(asset)
     return asset

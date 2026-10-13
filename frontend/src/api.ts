@@ -158,13 +158,19 @@ export interface VerificationResult {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
+  const headers: Record<string, string> = {
+    'X-App-Password': getPassword(),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
   const res = await fetch(`${API_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'X-App-Password': getPassword(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     ...options,
+    headers: {
+      ...headers,
+      ...((options?.headers as Record<string, string>) || {}),
+    },
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => null);
@@ -307,10 +313,31 @@ export const getAssetDepreciation = (assetId: number) =>
   request<Depreciation>(`/assets/${assetId}/depreciation`);
 
 export const uploadAssetPhoto = async (assetId: number, photoDataUri: string): Promise<Asset> => {
-  return request<Asset>(`/assets/${assetId}/photo`, {
-    method: 'POST',
-    body: JSON.stringify({ photo_data: photoDataUri }),
-  });
+  try {
+    const arr = photoDataUri.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    const formData = new FormData();
+    formData.append('photo', blob, `photo_${assetId}.jpg`);
+
+    return await request<Asset>(`/assets/${assetId}/photo`, {
+      method: 'POST',
+      body: formData,
+    });
+  } catch (formErr) {
+    console.warn("Multipart upload failed, falling back to JSON upload:", formErr);
+    return await request<Asset>(`/assets/${assetId}/photo`, {
+      method: 'POST',
+      body: JSON.stringify({ photo_data: photoDataUri }),
+    });
+  }
 };
 
 export const verifyAsset = (code: string) =>
