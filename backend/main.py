@@ -1,6 +1,9 @@
 import os
 from typing import Optional
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,8 +19,6 @@ from routes import (
     requests_router,
     audit_router,
 )
-
-load_dotenv()
 
 # Crear tablas en BD
 models.Base.metadata.create_all(bind=engine)

@@ -150,3 +150,79 @@ def test_logout(client: TestClient, test_user):
     # Intento de acceso a ruta protegida después de cerrar sesión
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
+
+
+def test_register_futupro_email_auto_assigns_warehouse(client: TestClient, db_session):
+    # Registro sin enviar warehouse_key explícito, usando correo de futupro
+    payload = {
+        "full_name": "Juan Pérez FutuPro",
+        "email": "juan.perez@futupro.com",
+        "document_id": "88776655",
+    }
+    response = client.post("/auth/register", json=payload)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["user"]["email"] == "juan.perez@futupro.com"
+    warehouses = [w["key"] for w in data["user"]["warehouses"]]
+    assert "futupro" in warehouses, f"Expected futupro in {warehouses}"
+
+
+def test_futupro_admin_visibility(client: TestClient, db_session):
+    from models import User, RoleEnum, Warehouse
+    from services.auth import create_token, hash_password
+
+    # Bodegas
+    futu_wh = db_session.query(Warehouse).filter(Warehouse.key == "futupro").first()
+    elite_wh = db_session.query(Warehouse).filter(Warehouse.key == "elite_nutricion").first()
+
+    # Admin de Futupro
+    futu_admin = User(
+        username="admin.futu",
+        full_name="Admin FutuPro",
+        email="admin@futupro.com",
+        document_id="111222333",
+        role=RoleEnum.ADMIN,
+        password_hash=hash_password("Pass123!"),
+    )
+    futu_admin.warehouses = [futu_wh]
+    db_session.add(futu_admin)
+
+    # Admin de Elite
+    elite_admin = User(
+        username="admin.elite",
+        full_name="Admin Elite",
+        email="admin@elitenutrition.com.co",
+        document_id="444555666",
+        role=RoleEnum.ADMIN,
+        password_hash=hash_password("Pass123!"),
+    )
+    elite_admin.warehouses = [elite_wh]
+    db_session.add(elite_admin)
+
+    # Empleado de FutuPro registrado
+    emp_futu = User(
+        username="emp.futu",
+        full_name="Empleado FutuPro",
+        email="colaborador@futupro.com",
+        document_id="777888999",
+        role=RoleEnum.EMPLEADO,
+        password_hash=hash_password("Pass123!"),
+    )
+    emp_futu.warehouses = [futu_wh]
+    db_session.add(emp_futu)
+    db_session.commit()
+
+    # FutuPro admin token
+    futu_token = create_token(db_session, futu_admin)
+    res_futu = client.get("/users/", headers={"Authorization": f"Bearer {futu_token}"})
+    assert res_futu.status_code == 200
+    futu_user_names = [u["full_name"] for u in res_futu.json()]
+    assert "Empleado FutuPro" in futu_user_names
+
+    # Elite admin token
+    elite_token = create_token(db_session, elite_admin)
+    res_elite = client.get("/users/", headers={"Authorization": f"Bearer {elite_token}"})
+    assert res_elite.status_code == 200
+    elite_user_names = [u["full_name"] for u in res_elite.json()]
+    assert "Empleado FutuPro" not in elite_user_names
+

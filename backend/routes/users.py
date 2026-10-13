@@ -68,6 +68,21 @@ def create_user(
     _assert_scoped_admin_can_assign(_admin, user.role, user.warehouse_keys)
     warehouses = _resolve_warehouses(db, user.warehouse_keys)
 
+    # Si no se seleccionó bodega explícita, aplicar asignación inteligente por correo o ámbito del admin
+    if not warehouses:
+        if user.email and "futupro" in user.email.lower():
+            futu_wh = db.query(models.Warehouse).filter(models.Warehouse.key == "futupro").first()
+            if futu_wh:
+                warehouses = [futu_wh]
+        elif user.email and "elite" in user.email.lower():
+            elite_wh = db.query(models.Warehouse).filter(models.Warehouse.key == "elite_nutricion").first()
+            if elite_wh:
+                warehouses = [elite_wh]
+        elif not auth_service.is_master_admin(_admin):
+            own_keys = auth_service.visible_warehouse_keys(_admin) or []
+            if own_keys:
+                warehouses = db.query(models.Warehouse).filter(models.Warehouse.key.in_(own_keys)).all()
+
     user_dict = user.dict(exclude={"warehouse_keys"})
     if user_dict.get("photo_url") and user_dict["photo_url"].startswith("data:image"):
         url = upload_base64_image(user_dict["photo_url"], "inventory-assets", "users/photos", f"{user.username}_photo")
@@ -99,7 +114,7 @@ def get_users(
         return db.query(models.User).order_by(models.User.full_name).all()
 
     own_keys = auth_service.visible_warehouse_keys(current_user) or []
-    from sqlalchemy import or_
+    from sqlalchemy import or_, and_
 
     # IDs de usuarios asignados a las bodegas administradas por el usuario actual
     allowed_user_ids = (
@@ -111,6 +126,24 @@ def get_users(
     # IDs de usuarios que tienen al menos una bodega vinculada
     has_any_warehouse_user_ids = db.query(models.user_warehouses.c.user_id)
 
+    # Filtrado coherente para usuarios pendientes / sin bodega asignada:
+    # Un admin exclusivo de FutuPro solo ve pendientes con correo de FutuPro (o sin correo asignado).
+    # Un admin exclusivo de Elite solo ve pendientes de su compañía.
+    is_futupro_admin = any("futu" in k.lower() for k in own_keys)
+    is_elite_admin = any("elite" in k.lower() or k not in ["futupro"] for k in own_keys)
+
+    unassigned_filter = ~models.User.id.in_(has_any_warehouse_user_ids)
+    if is_futupro_admin and not is_elite_admin:
+        unassigned_filter = and_(
+            unassigned_filter,
+            or_(models.User.email.ilike("%futupro%"), models.User.email.is_(None))
+        )
+    elif is_elite_admin and not is_futupro_admin:
+        unassigned_filter = and_(
+            unassigned_filter,
+            or_(~models.User.email.ilike("%futupro%"), models.User.email.is_(None))
+        )
+
     # Evitamos SELECT DISTINCT sobre models.User para prevenir el error en PostgreSQL
     # ("could not identify an equality operator for type json" en additional_photos)
     return (
@@ -118,7 +151,7 @@ def get_users(
         .filter(
             or_(
                 models.User.id.in_(allowed_user_ids),
-                ~models.User.id.in_(has_any_warehouse_user_ids),
+                unassigned_filter,
             )
         )
         .order_by(models.User.full_name)

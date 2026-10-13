@@ -1,9 +1,13 @@
 import os
 import base64
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from supabase import create_client, Client
 from datetime import datetime
 
-# Se asume que las variables de entorno están configuradas (p.ej. por Vercel o localmente en .env)
+# Se asume que las variables de entorno están configuradas (p.ej. por Render o localmente en .env)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 

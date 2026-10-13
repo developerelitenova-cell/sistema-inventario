@@ -72,13 +72,12 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
                 wh = db.query(models.Warehouse).filter(models.Warehouse.key.ilike("%elite%")).first()
         return wh
 
-    # Fallback inteligente si no seleccionaron bodega explícita pero el correo indica la empresa
+    # Asignación automática por correo corporativo: si el correo es de futupro, siempre corresponde a futupro por default
     eff_warehouse_key = payload.warehouse_key
-    if not eff_warehouse_key:
-        if "futupro" in email:
-            eff_warehouse_key = "futupro"
-        elif "elite" in email:
-            eff_warehouse_key = "elite_nutricion"
+    if "futupro" in email:
+        eff_warehouse_key = "futupro"
+    elif not eff_warehouse_key and "elite" in email:
+        eff_warehouse_key = "elite_nutricion"
 
     target_wh = _find_warehouse(eff_warehouse_key) if eff_warehouse_key else None
 
@@ -92,7 +91,7 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
             user.cargo = payload.cargo.strip()
         if payload.role and payload.role != models.RoleEnum.ADMIN:
             user.role = payload.role
-        if target_wh and not user.warehouses:
+        if target_wh and target_wh not in user.warehouses:
             user.warehouses.append(target_wh)
     else:
         base_username = _slugify_username(payload.full_name)
@@ -123,7 +122,7 @@ def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
             password_hash=password_hash,
         )
         
-        if target_wh:
+        if target_wh and target_wh not in user.warehouses:
             user.warehouses.append(target_wh)
                 
         db.add(user)

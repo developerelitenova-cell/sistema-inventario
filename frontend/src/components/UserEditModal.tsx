@@ -18,7 +18,20 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
   const ownKeys = new Set((actingUser?.warehouses ?? []).map((w) => w.key));
   const assignableWarehouses = isMaster ? warehouses : warehouses.filter((w) => ownKeys.has(w.key));
   const assignableRoles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => isMaster || r !== 'admin');
-  const [warehouseKeys, setWarehouseKeys] = useState<string[]>(user.warehouses.map((w) => w.key));
+  const [warehouseKeys, setWarehouseKeys] = useState<string[]>(() => {
+    if (user.warehouses.length > 0) {
+      return user.warehouses.map((w) => w.key);
+    }
+    const emailLower = (user.email ?? '').toLowerCase();
+    if (emailLower.includes('@futupro')) {
+      const futu = assignableWarehouses.find((w) => w.key.includes('futu'));
+      if (futu) return [futu.key];
+    } else if (emailLower.includes('@elitenutrition') || emailLower.includes('@elitenova')) {
+      const elite = assignableWarehouses.find((w) => w.key.includes('elite'));
+      if (elite) return [elite.key];
+    }
+    return [];
+  });
   const [cargo, setCargo] = useState(user.cargo ?? '');
   const [email, setEmail] = useState(user.email ?? '');
   const [role, setRole] = useState<Role>(user.role);

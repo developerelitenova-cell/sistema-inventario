@@ -66,6 +66,7 @@ def create_asset(
         description=asset.description,
         brand_model=asset.brand_model,
         photo_url=photo_url,
+        additional_photos=additional_photos_uploaded,
         status=asset.status,
         qr_data=qr_base64,
         is_active=True,
@@ -368,7 +369,32 @@ def update_asset(
                     detail="No se puede regresar al estado 'Pendiente de Registro' un activo que ya fue dado de alta previamente."
                 )
 
-    for field, value in update.model_dump(exclude_unset=True).items():
+    update_data = update.model_dump(exclude_unset=True)
+
+    # Procesar photo_url si viene como Base64
+    if "photo_url" in update_data:
+        p_val = update_data.pop("photo_url")
+        if p_val and p_val.startswith("data:image"):
+            uploaded = upload_base64_image(p_val, "inventory-assets", "assets/photos", f"{asset.unique_code}_photo")
+            if uploaded:
+                asset.photo_url = uploaded
+        elif p_val is not None:
+            asset.photo_url = p_val
+
+    # Procesar additional_photos si viene
+    if "additional_photos" in update_data:
+        add_photos = update_data.pop("additional_photos") or []
+        add_upl = []
+        for idx, p in enumerate(add_photos):
+            if p and p.startswith("data:image"):
+                upl = upload_base64_image(p, "inventory-assets", "assets/photos", f"{asset.unique_code}_add_{idx}")
+                if upl:
+                    add_upl.append(upl)
+            elif p:
+                add_upl.append(p)
+        asset.additional_photos = add_upl
+
+    for field, value in update_data.items():
         if field == "accessories":
             setattr(asset, field, [acc.dict() for acc in value] if value else [])
         else:
@@ -383,7 +409,7 @@ def update_asset(
     return asset
 
 
-class PhotoUploadRequest(BaseModel):
+class PhotoUploadRequest(schemas.BaseModel):
     photo_data: str # Base64 data URI
 
 @router.post("/assets/{asset_id}/photo", response_model=schemas.Asset)

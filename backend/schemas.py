@@ -139,6 +139,8 @@ class AssetBatchGenerate(BaseModel):
 class AssetUpdate(BaseModel):
     description: Optional[str] = None
     brand_model: Optional[str] = None
+    photo_url: Optional[str] = None
+    additional_photos: Optional[List[str]] = None
     status: Optional[AssetStatusEnum] = None
     module: Optional[str] = None
     area: Optional[str] = None

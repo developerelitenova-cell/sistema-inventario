@@ -158,13 +158,21 @@ export default function Register() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      let finalWarehouseKey = formData.warehouse_key;
+      const lowerEmail = formData.email.toLowerCase().trim();
+      if (lowerEmail.includes("@futupro")) {
+        finalWarehouseKey = "futupro";
+      } else if (!finalWarehouseKey && (lowerEmail.includes("@elitenutrition") || lowerEmail.includes("@elitenova"))) {
+        finalWarehouseKey = "elite_nutricion";
+      }
+
       const res = await registerUser({
         full_name: formData.full_name,
         document_id: formData.document_id,
         email: formData.email,
         photo_url: photo,
         digital_signature_url: finalSignature ?? undefined,
-        warehouse_key: formData.warehouse_key || undefined,
+        warehouse_key: finalWarehouseKey || undefined,
         cargo: formData.cargo || undefined,
         role: formData.role,
       });
@@ -273,6 +281,11 @@ export default function Register() {
                   </option>
                 ))}
               </select>
+              {formData.email.toLowerCase().includes("@futupro") && (
+                <p className="text-xs text-blue-600 mt-1 font-semibold flex items-center gap-1">
+                  ✓ Asignación automática: Tu usuario pertenecerá a la bodega FutuPro
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Cargo / Función en la empresa</label>

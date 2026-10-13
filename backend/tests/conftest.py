@@ -32,9 +32,10 @@ def db_session(setup_database):
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
     
-    # Sembrar bodega por defecto para tests
-    warehouse = Warehouse(key="test_module", name="Test Module")
-    session.add(warehouse)
+    # Sembrar bodegas por defecto para tests
+    session.add(Warehouse(key="test_module", name="Test Module"))
+    session.add(Warehouse(key="futupro", name="Futuro Pro"))
+    session.add(Warehouse(key="elite_nutricion", name="Elite Nutrition"))
     session.commit()
 
     yield session

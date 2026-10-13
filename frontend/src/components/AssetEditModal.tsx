@@ -93,9 +93,16 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
         accessories: form.accessories,
         observations: form.observations || undefined,
         inventory_type: form.inventory_type,
+        photo_url: photo || undefined,
+        additional_photos: additionalPhotos,
       });
       if (photo) {
-        saved = await uploadAssetPhoto(asset.id, photo);
+        try {
+          const photoUpdated = await uploadAssetPhoto(asset.id, photo);
+          if (photoUpdated) saved = photoUpdated;
+        } catch (photoErr) {
+          console.warn("uploadAssetPhoto auxiliary call:", photoErr);
+        }
       }
       onSaved(saved);
       onClose();

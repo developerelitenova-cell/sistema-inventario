@@ -31,7 +31,9 @@ const UserCreateModal = ({ onClose, onCreated }: UserCreateModalProps) => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('empleado');
   const [cargo, setCargo] = useState('');
-  const [warehouseKeys, setWarehouseKeys] = useState<string[]>([]);
+  const [warehouseKeys, setWarehouseKeys] = useState<string[]>(
+    !isMaster && assignableWarehouses.length === 1 ? [assignableWarehouses[0].key] : []
+  );
   const [cargoOptions, setCargoOptions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,22 @@ const UserCreateModal = ({ onClose, onCreated }: UserCreateModalProps) => {
   useEffect(() => {
     getRolePermissions().then((perms) => setCargoOptions(perms.map(p => p.cargo).sort())).catch(() => {});
   }, []);
+
+  const handleEmailChange = (val: string) => {
+    setEmail(val);
+    const lower = val.toLowerCase().trim();
+    if (lower.includes('@futupro')) {
+      const futu = assignableWarehouses.find((w) => w.key.includes('futu'));
+      if (futu && !warehouseKeys.includes(futu.key)) {
+        setWarehouseKeys([futu.key]);
+      }
+    } else if (lower.includes('@elitenutrition') || lower.includes('@elitenova')) {
+      const elite = assignableWarehouses.find((w) => w.key.includes('elite'));
+      if (elite && !warehouseKeys.includes(elite.key)) {
+        setWarehouseKeys([elite.key]);
+      }
+    }
+  };
 
   const toggleWarehouse = (key: string) => {
     setWarehouseKeys((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
@@ -98,7 +116,7 @@ const UserCreateModal = ({ onClose, onCreated }: UserCreateModalProps) => {
 
           <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Correo electrónico</div>
-            <input className="input-field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="input-field" type="email" value={email} onChange={(e) => handleEmailChange(e.target.value)} />
           </label>
 
           <label>

@@ -273,6 +273,8 @@ export const getUnusedAssets = (module?: Module) =>
 export type AssetUpdate = Partial<{
   description: string;
   brand_model: string;
+  photo_url: string;
+  additional_photos: string[];
   status: AssetStatus;
   module: Module;
   area: string;
