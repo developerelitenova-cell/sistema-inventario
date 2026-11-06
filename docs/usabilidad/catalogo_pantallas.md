@@ -29,3 +29,13 @@ Este documento lista las pantallas principales disponibles en la aplicación y d
 
 ### 6. `SecurityExitPass.tsx` (Portería)
 **Descripción:** Interfaz minimalista diseñada explícitamente para tablets. Letra enorme, colores puros (Rojo/Verde) para el guardia. No tiene barra de navegación superior (Kiosko mode).
+
+### 7. `Accounting.tsx` (Reportes, Auditoría y Valoración de Activos)
+**Descripción:** Módulo de inteligencia patrimonial y reportería ejecutiva para Administradores y Encargados. Permite consolidar, auditar y emitir informes para el dueño de la empresa y la Gerencia General.
+- **Filtro Multi-Bodega:** Selección individual de cada sede o visión unificada mediante *Todas las Bodegas (Consolidado)*.
+- **Segmentación por Tipo:** Pestañas directas para Muebles y Enseres (`muebles`), Activos Fijos / Cómputo (`activos`) y Material Publicitario (`publicitario`).
+- **Filtros Avanzados:** Búsqueda textual, marcas dinámicas (Apple, Dell, etc.), áreas, custodio asignado, estado y rango de fechas de compra.
+- **KPIs y Métricas Financieras:** Inversión histórica en compras, valor comercial estimado y alertas de activos pendientes por tasar.
+- **Exportación a Excel:** Descarga masiva en archivo `.csv` con formato UTF-8 BOM y delimitador `;` con 15 columnas detalladas.
+- **Modo Informe Gerencial (PDF):** Vista formal con membrete oficial, logotipo de la empresa, metadatos de auditoría, tablas consolidadas, listado detallado y firmas legales para entrega formal a la dirección.
+
