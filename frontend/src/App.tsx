@@ -38,6 +38,7 @@ function AppShell() {
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/accounting" element={<Accounting />} />
+          <Route path="/reports" element={<Accounting />} />
           <Route path="/assets/new" element={<AddAsset />} />
           <Route path="/assets/register-by-code" element={<RegisterByCode />} />
           <Route path="/qr-codes" element={<QRCodes />} />

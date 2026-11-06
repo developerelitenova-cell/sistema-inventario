@@ -216,8 +216,23 @@ export const changePassword = (payload: { current_password: string; new_password
 export const logoutApi = () =>
   request<{ message: string }>('/auth/logout', { method: 'POST' }).catch(() => null);
 
-export const getAssets = (module?: Module) =>
-  request<Asset[]>(`/assets/${module ? `?module=${module}` : ''}`);
+export interface GetAssetsOptions {
+  inventory_type?: string;
+  category?: string;
+  status?: string;
+  search?: string;
+}
+
+export const getAssets = (module?: Module, options?: GetAssetsOptions) => {
+  const params = new URLSearchParams();
+  if (module && module !== 'ALL') params.append('module', module);
+  if (options?.inventory_type && options.inventory_type !== 'ALL') params.append('inventory_type', options.inventory_type);
+  if (options?.category && options.category !== 'ALL') params.append('category', options.category);
+  if (options?.status && options.status !== 'ALL') params.append('status', options.status);
+  if (options?.search) params.append('search', options.search);
+  const qs = params.toString();
+  return request<Asset[]>(`/assets/${qs ? `?${qs}` : ''}`);
+};
 
 export interface AssetAvailability {
   available_count: number;

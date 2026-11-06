@@ -298,5 +298,29 @@ class ActivityLog(BaseModel):
     class Config:
         from_attributes = True
 
+class ArchivedUser(BaseModel):
+    id: int
+    original_user_id: Optional[int] = None
+    document_id: Optional[str] = None
+    full_name: str
+    username: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+    cargo: Optional[str] = None
+    warehouses_str: Optional[str] = None
+    deleted_at: datetime
+    deleted_by_name: Optional[str] = None
+    archive_folder_path: Optional[str] = None
+    archive_zip_url: Optional[str] = None
+    archive_html_url: Optional[str] = None
+    history_summary: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+class DeleteUserResponse(BaseModel):
+    message: str
+    archived_user: ArchivedUser
+
 AssetRequest.model_rebuild()
 

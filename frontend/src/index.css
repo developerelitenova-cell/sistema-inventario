@@ -219,3 +219,53 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* --- Print Styles for Executive Reports --- */
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 11pt !important;
+  }
+
+  nav,
+  .liquid-glass,
+  .print\:hidden,
+  button {
+    display: none !important;
+  }
+
+  .app-layout,
+  .page-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .glass-panel {
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  th, td {
+    padding: 6px 8px !important;
+  }
+}

@@ -171,6 +171,7 @@ def get_assets(
     search: Optional[str] = None,
     status: Optional[str] = None,
     category: Optional[str] = None,
+    inventory_type: Optional[str] = None,
     skip: Optional[int] = None,
     limit: Optional[int] = None,
     db: Session = Depends(get_db),
@@ -178,6 +179,10 @@ def get_assets(
 ):
     if (current_user.role.value if hasattr(current_user.role, "value") else current_user.role) == models.RoleEnum.EMPLEADO.value:
         raise HTTPException(status_code=403, detail="Los empleados no tienen acceso al catálogo de activos")
+
+    if module in ("", "ALL", "all"):
+        module = None
+
     if module and not auth_service.can_access_warehouse(current_user, module):
         raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
 
@@ -200,6 +205,12 @@ def get_assets(
 
     if category:
         query = query.filter(models.Asset.category == category)
+
+    if inventory_type:
+        try:
+            query = query.filter(models.Asset.inventory_type == models.InventoryTypeEnum(inventory_type))
+        except ValueError:
+            query = query.filter(models.Asset.inventory_type == inventory_type)
 
     if search:
         s = f"%{search.strip()}%"

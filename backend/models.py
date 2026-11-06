@@ -272,3 +272,28 @@ class ActivityLog(Base):
     created_at = Column(DateTime, default=get_colombia_time, index=True)
 
     actor = relationship("User")
+
+
+class ArchivedUser(Base):
+    """Registro histórico y custodia de carpetas de usuarios eliminados del sistema."""
+    __tablename__ = "archived_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    original_user_id = Column(Integer, nullable=True)
+    document_id = Column(String, index=True, nullable=True)
+    full_name = Column(String, nullable=False)
+    username = Column(String, nullable=False)
+    email = Column(String, nullable=True)
+    role = Column(String, nullable=True)
+    cargo = Column(String, nullable=True)
+    warehouses_str = Column(String, nullable=True)
+
+    deleted_at = Column(DateTime, default=get_colombia_time, index=True)
+    deleted_by_id = Column(Integer, nullable=True)
+    deleted_by_name = Column(String, nullable=True)
+
+    archive_folder_path = Column(String, nullable=True)
+    archive_zip_url = Column(String, nullable=True)
+    archive_html_url = Column(String, nullable=True)
+
+    history_summary = Column(JSON, default=dict)
