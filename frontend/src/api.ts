@@ -366,7 +366,18 @@ export const getLoan = (loanId: number) =>
 
 export const getUsers = () => request<User[]>('/users/');
 
-export const updateUser = (userId: number, update: Partial<{ cargo: string; role: Role; warehouse_keys: string[]; email: string }>) =>
+export type UserUpdateInput = Partial<{
+  full_name: string;
+  document_id: string;
+  email: string;
+  cargo: string;
+  role: Role;
+  warehouse_keys: string[];
+  photo_url: string;
+  is_active: boolean;
+}>;
+
+export const updateUser = (userId: number, update: UserUpdateInput) =>
   request<User>(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(update) });
 
 export interface UserCreateInput {

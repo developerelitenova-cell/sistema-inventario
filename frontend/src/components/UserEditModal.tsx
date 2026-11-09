@@ -32,6 +32,8 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
     }
     return [];
   });
+  const [fullName, setFullName] = useState(user.full_name ?? '');
+  const [documentId, setDocumentId] = useState(user.document_id ?? '');
   const [cargo, setCargo] = useState(user.cargo ?? '');
   const [email, setEmail] = useState(user.email ?? '');
   const [role, setRole] = useState<Role>(user.role);
@@ -49,13 +51,23 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      setError('El nombre completo es obligatorio');
+      return;
+    }
+    if (!documentId.trim()) {
+      setError('El documento de identidad es obligatorio');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const saved = await updateUser(user.id, {
+        full_name: fullName.trim(),
+        document_id: documentId.trim(),
         warehouse_keys: warehouseKeys,
-        cargo: cargo || undefined,
-        email: email || undefined,
+        cargo: cargo.trim() || undefined,
+        email: email.trim() || undefined,
         role,
       });
       onSaved(saved);
@@ -74,7 +86,12 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
     }}>
       <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>{user.full_name}</h2>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Modificar Información del Usuario</h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+              Actualiza datos de personal, gerentes o encargados (usuario: {user.username})
+            </p>
+          </div>
           <button type="button" onClick={onClose} className="btn btn-outline" style={{ padding: '8px' }}>
             <X size={18} />
           </button>
@@ -82,18 +99,46 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Nombre Completo <span style={{ color: 'var(--danger-color)' }}>*</span>
+            </div>
+            <input 
+              type="text" 
+              className="input-field" 
+              value={fullName} 
+              onChange={(e) => setFullName(e.target.value)} 
+              placeholder="Ej. Juan Carlos Pérez Gómez"
+              required 
+            />
+          </label>
+
+          <label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Documento de Identidad / Cédula <span style={{ color: 'var(--danger-color)' }}>*</span>
+            </div>
+            <input 
+              type="text" 
+              className="input-field" 
+              value={documentId} 
+              onChange={(e) => setDocumentId(e.target.value)} 
+              placeholder="Ej. 1020304050"
+              required 
+            />
+          </label>
+
+          <label>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Correo Electrónico</div>
             <input 
               type="email" 
               className="input-field" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
-              placeholder="ejemplo@futupro.com" 
+              placeholder="ejemplo@elitenutrition.com.co" 
             />
           </label>
 
           <label>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Rol</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Rol en el Sistema</div>
             <select className="input-field" value={role} onChange={(e) => setRole(e.target.value as Role)}>
               {assignableRoles.map(r => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -123,13 +168,23 @@ const UserEditModal = ({ user, onClose, onSaved }: UserEditModalProps) => {
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
               Cargo (define qué categorías de activos puede solicitar)
             </div>
-            <select className="input-field" value={cargo} onChange={(e) => setCargo(e.target.value)}>
-              <option value="">Sin asignar (ve todas las categorías de su módulo)</option>
+            <input
+              className="input-field"
+              list="cargo-options-list"
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Ej. Gerente General, Administrador, Diseñador..."
+            />
+            <datalist id="cargo-options-list">
               {cargoOptions.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c} />
               ))}
-            </select>
+            </datalist>
           </label>
+
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-color, #e2e8f0)', padding: '8px 12px', borderRadius: '8px' }}>
+            ℹ️ Si estás cambiando de persona (ej. nuevo gerente o responsable), el sistema actualizará automáticamente el nombre en los activos que estaban bajo su custodia para que no haya cruce de información.
+          </div>
 
           {error && <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>}
 

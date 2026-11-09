@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime
 from models import RoleEnum, AssetStatusEnum, LoanStatusEnum, CategoryEnum, ValueSourceEnum, AssignmentStatusEnum, RequestStatusEnum, InventoryTypeEnum
@@ -47,11 +47,21 @@ class User(UserBase):
         from_attributes = True
 
 class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    document_id: Optional[str] = None
     cargo: Optional[str] = None
     role: Optional[RoleEnum] = None
     warehouse_keys: Optional[List[str]] = None
     is_active: Optional[bool] = None
     email: Optional[str] = None
+    photo_url: Optional[str] = None
+
+    @field_validator("email", "cargo", "full_name", "document_id", "photo_url", mode="before")
+    @classmethod
+    def clean_empty_strings(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 class RegisterRequest(BaseModel):
     full_name: str
@@ -125,6 +135,13 @@ class AssetCreate(BaseModel):
     purchase_price: Optional[float] = None
     purchase_date: Optional[datetime] = None
 
+    @field_validator("category", "inventory_type", "status", "purchase_date", mode="before")
+    @classmethod
+    def clean_empty_enums_and_dates_create(cls, v):
+        if v in ("", "None", "ALL", "all", None):
+            return None
+        return v
+
 class Asset(AssetBase):
     id: int
     class Config:
@@ -152,6 +169,13 @@ class AssetUpdate(BaseModel):
     category: Optional[CategoryEnum] = None
     purchase_price: Optional[float] = None
     purchase_date: Optional[datetime] = None
+
+    @field_validator("category", "inventory_type", "status", "purchase_date", mode="before")
+    @classmethod
+    def clean_empty_enums_and_dates_update(cls, v):
+        if v in ("", "None", "ALL", "all", None):
+            return None
+        return v
 
 class LoanBase(BaseModel):
     asset_id: int

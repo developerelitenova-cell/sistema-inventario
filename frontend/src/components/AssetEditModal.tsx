@@ -30,6 +30,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
     accessories: asset.accessories ? [...asset.accessories] : ([] as import('../api').AccessoryItem[]),
     observations: asset.observations ?? '',
     inventory_type: asset.inventory_type,
+    category: asset.category ?? '',
   });
   const [photo, setPhoto] = useState<string | null>(null);
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>(asset.additional_photos || []);
@@ -93,6 +94,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
         accessories: form.accessories,
         observations: form.observations || undefined,
         inventory_type: form.inventory_type,
+        category: (form.category as any) || undefined,
         photo_url: photo || undefined,
         additional_photos: additionalPhotos,
       });
@@ -261,6 +263,18 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
               </select>
             </label>
             <label style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Categoría</div>
+              <select className="input-field" value={form.category} onChange={(e) => update('category', e.target.value)}>
+                <option value="">Sin categorizar / Auto-detectar</option>
+                {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <label style={{ flex: 1 }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
               <select className="input-field" value={form.area} onChange={(e) => update('area', e.target.value)}>
                 <option value="">Sin especificar</option>
@@ -272,12 +286,9 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
                 ))}
               </select>
             </label>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
             <label style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Responsable</div>
-              <input className="input-field" value={form.responsible_name} onChange={(e) => update('responsible_name', e.target.value)} />
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Responsable / Custodio</div>
+              <input className="input-field" value={form.responsible_name} onChange={(e) => update('responsible_name', e.target.value)} placeholder="Custodio actual" />
             </label>
           </div>
 
@@ -293,7 +304,7 @@ const AssetEditModal = ({ asset, onClose, onSaved }: AssetEditModalProps) => {
           </div>
 
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '8px' }}>
-            <div>Categoría detectada: <strong style={{ color: 'var(--text-primary)' }}>{asset.category ? CATEGORY_LABELS[asset.category] : '—'}</strong></div>
+            <div>Categoría asignada: <strong style={{ color: 'var(--text-primary)' }}>{form.category ? CATEGORY_LABELS[form.category as keyof typeof CATEGORY_LABELS] : (asset.category ? CATEGORY_LABELS[asset.category] : 'Sin categorizar (se inferirá de descripción y marca)')}</strong></div>
             {!form.purchase_price && asset.estimated_value != null && (
               <div style={{ marginTop: '4px' }}>
                 Valor estimado de referencia: <strong style={{ color: 'var(--text-primary)' }}>{formatCOP(asset.estimated_value)}</strong>

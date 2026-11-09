@@ -183,11 +183,59 @@ def update_user(
             update.warehouse_keys if update.warehouse_keys is not None else list(target_keys),
         )
 
+    # Validar unicidad y formato de correo electrónico
+    if update.email is not None and update.email.strip().lower() != (user.email or "").strip().lower():
+        cleaned_email = update.email.strip().lower()
+        validate_corporate_email(cleaned_email)
+        existing_email = db.query(models.User).filter(
+            models.User.email == cleaned_email,
+            models.User.id != user_id
+        ).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Ese correo electrónico ya está registrado por otro usuario")
+        user.email = cleaned_email
+
+    # Validar unicidad de documento de identidad
+    if update.document_id is not None and update.document_id.strip() != (user.document_id or "").strip():
+        cleaned_doc = update.document_id.strip()
+        existing_doc = db.query(models.User).filter(
+            models.User.document_id == cleaned_doc,
+            models.User.id != user_id
+        ).first()
+        if existing_doc:
+            raise HTTPException(status_code=400, detail="Ese documento de identidad ya está registrado por otro usuario")
+        user.document_id = cleaned_doc
+
+    # Actualizar nombre completo y sincronizar custodia en activos si el gerente/persona cambia
+    old_full_name = user.full_name
+    if update.full_name is not None and update.full_name.strip():
+        new_name = update.full_name.strip()
+        user.full_name = new_name
+        if old_full_name and old_full_name != new_name:
+            db.query(models.Asset).filter(
+                models.Asset.responsible_name == old_full_name
+            ).update({models.Asset.responsible_name: new_name}, synchronize_session=False)
+
+    # Procesar foto de perfil si viene Base64 o URL
+    if update.photo_url is not None:
+        p_val = update.photo_url
+        if p_val and p_val.startswith("data:image"):
+            uploaded = upload_base64_image(p_val, "inventory-assets", "users/photos", f"{user.username}_photo")
+            if uploaded:
+                user.photo_url = uploaded
+        else:
+            user.photo_url = p_val or None
+
+    if update.cargo is not None:
+        user.cargo = update.cargo
+    if update.role is not None:
+        user.role = update.role
+    if update.is_active is not None:
+        user.is_active = update.is_active
+
     if update.warehouse_keys is not None:
         user.warehouses = _resolve_warehouses(db, update.warehouse_keys)
 
-    for field, value in update.dict(exclude_unset=True, exclude={"warehouse_keys"}).items():
-        setattr(user, field, value)
     audit.log_action(db, _admin, "user.updated", f"{_admin.full_name} editó al usuario {user.full_name}", entity_type="user", entity_id=user.id)
     db.commit()
     db.refresh(user)

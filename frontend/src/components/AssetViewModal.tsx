@@ -1,23 +1,36 @@
 import { type Asset, STATUS_LABELS, CATEGORY_LABELS, INVENTORY_TYPE_LABELS } from '../api';
-import { X, User as UserIcon } from 'lucide-react';
+import { X, User as UserIcon, Pencil } from 'lucide-react';
 import HolderInfoPopup from './HolderInfoPopup';
 
 interface AssetViewModalProps {
   asset: Asset;
   onClose: () => void;
+  onEdit?: (asset: Asset) => void;
 }
 
-export default function AssetViewModal({ asset, onClose }: AssetViewModalProps) {
+export default function AssetViewModal({ asset, onClose, onEdit }: AssetViewModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="glass-panel relative w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--danger-color)] transition-colors z-10"
-        >
-          <X size={24} />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(asset)}
+              className="btn btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3 shadow-xs"
+              title="Modificar descripción, marca, categoría o precio de este activo"
+            >
+              <Pencil size={14} />
+              <span>Editar</span>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="text-[var(--text-secondary)] hover:text-[var(--danger-color)] p-1.5 rounded-lg hover:bg-black/5 transition-colors"
+          >
+            <X size={22} />
+          </button>
+        </div>
 
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -82,7 +95,15 @@ export default function AssetViewModal({ asset, onClose }: AssetViewModalProps) 
                 </div>
                 <div>
                   <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold">Categoría</label>
-                  <div className="text-sm">{asset.category ? CATEGORY_LABELS[asset.category] : 'N/A'}</div>
+                  <div className="text-sm font-medium">
+                    {asset.category && CATEGORY_LABELS[asset.category]
+                      ? CATEGORY_LABELS[asset.category]
+                      : asset.inventory_type === 'muebles'
+                      ? 'Mobiliario y Enseres'
+                      : asset.inventory_type === 'publicitario'
+                      ? 'Material Publicitario'
+                      : 'Sin categorizar'}
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold">Área</label>

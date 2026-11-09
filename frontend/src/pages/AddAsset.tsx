@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Package } from 'lucide-react';
-import { createAsset, estimateAssetValueWithAI, getAreaOptions, INVENTORY_TYPE_LABELS, type Module, type Asset, type InventoryType } from '../api';
+import { createAsset, estimateAssetValueWithAI, getAreaOptions, INVENTORY_TYPE_LABELS, CATEGORY_LABELS, type Module, type Asset, type InventoryType, type Category } from '../api';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
 import CameraCapture from '../components/CameraCapture';
@@ -21,6 +21,7 @@ const AddAsset = () => {
     accessories: [] as import('../api').AccessoryItem[],
     observations: '',
     inventory_type: 'activos' as InventoryType,
+    category: '' as Category | '',
   });
   const [assetModule, setAssetModule] = useState<Module>(currentModule);
 
@@ -117,6 +118,7 @@ const AddAsset = () => {
         accessories: form.accessories,
         observations: form.observations || undefined,
         inventory_type: form.inventory_type,
+        category: form.category || undefined,
         photo_url: photo || undefined,
         additional_photos: additionalPhotos,
       });
@@ -280,6 +282,18 @@ const AddAsset = () => {
             </select>
           </label>
           <label style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Categoría</div>
+            <select className="input-field" value={form.category} onChange={(e) => update('category', e.target.value)}>
+              <option value="">Auto-detectar por descripción</option>
+              {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => (
+                <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Área</div>
             <select 
               className="input-field" 
@@ -289,9 +303,6 @@ const AddAsset = () => {
               {getAreaOptions(assetModule).map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Responsable</div>
             <input className="input-field" value={form.responsible_name} onChange={(e) => update('responsible_name', e.target.value)} />

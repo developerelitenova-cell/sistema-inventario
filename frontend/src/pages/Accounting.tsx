@@ -14,7 +14,8 @@ import {
   ArrowUpDown,
   User as UserIcon,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil
 } from 'lucide-react';
 import {
   getAssets,
@@ -35,11 +36,12 @@ import { Navigate } from 'react-router-dom';
 import { exportToCsv } from '../utils/exportUtils';
 import Pagination from '../components/Pagination';
 import AssetViewModal from '../components/AssetViewModal';
+import AssetEditModal from '../components/AssetEditModal';
 import logoNova from '../assets/logo_elite_nova.png';
 import logoFutu from '../assets/logo_futupro.png';
 
 type ValueFilterType = 'ALL' | 'WITH_VALUE' | 'WITHOUT_VALUE';
-type SortField = 'unique_code' | 'description' | 'brand_model' | 'module' | 'inventory_type' | 'purchase_price' | 'estimated_value' | 'status';
+type SortField = 'unique_code' | 'description' | 'brand_model' | 'module' | 'inventory_type' | 'category' | 'purchase_price' | 'estimated_value' | 'status';
 
 const Accounting = () => {
   const { module: contextModule } = useModule();
@@ -81,6 +83,18 @@ const Accounting = () => {
 
   // Modal para ver foto y detalle completo
   const [viewingAsset, setViewingAsset] = useState<Asset | null>(null);
+  // Modal para editar / categorizar activo directamente desde el reporte
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+
+  // Formateador inteligente de categoría para evitar cruce de información
+  const getAssetCategoryLabel = (asset: Asset) => {
+    if (asset.category && CATEGORY_LABELS[asset.category]) {
+      return CATEGORY_LABELS[asset.category];
+    }
+    if (asset.inventory_type === 'muebles') return 'Mobiliario y Enseres';
+    if (asset.inventory_type === 'publicitario') return 'Material Publicitario';
+    return 'Sin categorizar';
+  };
 
   // Inicializar bodega seleccionada según rol
   useEffect(() => {
@@ -234,6 +248,10 @@ const Accounting = () => {
         case 'inventory_type':
           valA = a.inventory_type || '';
           valB = b.inventory_type || '';
+          break;
+        case 'category':
+          valA = a.category ? (CATEGORY_LABELS[a.category] || a.category).toLowerCase() : '';
+          valB = b.category ? (CATEGORY_LABELS[b.category] || b.category).toLowerCase() : '';
           break;
         case 'purchase_price':
           valA = a.purchase_price || 0;
@@ -412,10 +430,30 @@ const Accounting = () => {
   return (
     <div className="space-y-6 animate-fade-in print:p-0">
       {/* =========================================================================
-          MODAL DE VISTA DETALLADA / FOTO
+          MODALES DE VISTA Y EDICIÓN RÁPIDA DE ACTIVOS
          ========================================================================= */}
       {viewingAsset && (
-        <AssetViewModal asset={viewingAsset} onClose={() => setViewingAsset(null)} />
+        <AssetViewModal 
+          asset={viewingAsset} 
+          onClose={() => setViewingAsset(null)}
+          onEdit={(asset) => {
+            setViewingAsset(null);
+            setEditingAsset(asset);
+          }}
+        />
+      )}
+
+      {editingAsset && (
+        <AssetEditModal
+          asset={editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSaved={(updated) => {
+            setAssets(prev => prev.map(a => a.id === updated.id ? updated : a));
+            if (viewingAsset && viewingAsset.id === updated.id) {
+              setViewingAsset(updated);
+            }
+          }}
+        />
       )}
 
       {/* =========================================================================
@@ -582,6 +620,7 @@ const Accounting = () => {
                     <th className="p-2.5">Código</th>
                     <th className="p-2.5">Descripción y Modelo</th>
                     <th className="p-2.5">Tipo</th>
+                    <th className="p-2.5">Categoría</th>
                     <th className="p-2.5">Bodega / Área</th>
                     <th className="p-2.5">Responsable</th>
                     <th className="p-2.5">Estado</th>
@@ -602,6 +641,11 @@ const Accounting = () => {
                       <td className="p-2.5 whitespace-nowrap">
                         <span className="font-medium text-gray-700">
                           {INVENTORY_TYPE_LABELS[asset.inventory_type] || asset.inventory_type}
+                        </span>
+                      </td>
+                      <td className="p-2.5 whitespace-nowrap">
+                        <span className="font-medium text-gray-700">
+                          {getAssetCategoryLabel(asset)}
                         </span>
                       </td>
                       <td className="p-2.5">
@@ -1100,6 +1144,15 @@ const Accounting = () => {
                       </th>
                       <th 
                         className="p-3.5 font-semibold text-xs text-gray-600 cursor-pointer hover:text-gray-900 select-none"
+                        onClick={() => handleSort('category' as SortField)}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>Categoría</span>
+                          <ArrowUpDown size={12} className={sortBy === 'category' ? 'text-[var(--gold)]' : 'opacity-40'} />
+                        </div>
+                      </th>
+                      <th 
+                        className="p-3.5 font-semibold text-xs text-gray-600 cursor-pointer hover:text-gray-900 select-none"
                         onClick={() => handleSort('module')}
                       >
                         <div className="flex items-center gap-1">
@@ -1135,6 +1188,7 @@ const Accounting = () => {
                           <ArrowUpDown size={12} className={sortBy === 'estimated_value' ? 'text-[var(--gold)]' : 'opacity-40'} />
                         </div>
                       </th>
+                      <th className="p-3.5 font-semibold text-xs text-gray-600 text-center w-14">Editar</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1205,6 +1259,13 @@ const Accounting = () => {
                             </span>
                           </td>
 
+                          {/* Categoría */}
+                          <td className="p-3.5 text-xs whitespace-nowrap">
+                            <span className="font-medium text-gray-700">
+                              {getAssetCategoryLabel(asset)}
+                            </span>
+                          </td>
+
                           {/* Bodega / Área */}
                           <td className="p-3.5 text-xs">
                             <p className="font-semibold text-gray-800 whitespace-nowrap">
@@ -1252,6 +1313,20 @@ const Accounting = () => {
                             ) : (
                               <span className="text-amber-500 font-normal italic text-[11px]">Por valorar</span>
                             )}
+                          </td>
+
+                          {/* Botón de Edición Rápida */}
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingAsset(asset);
+                              }}
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-amber-800 hover:border-amber-400 hover:bg-amber-50/60 transition-all shadow-2xs"
+                              title="Editar / Categorizar este activo"
+                            >
+                              <Pencil size={14} />
+                            </button>
                           </td>
                         </tr>
                       );

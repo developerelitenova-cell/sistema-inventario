@@ -182,6 +182,12 @@ def get_assets(
 
     if module in ("", "ALL", "all"):
         module = None
+    if category in ("", "ALL", "all"):
+        category = None
+    if inventory_type in ("", "ALL", "all"):
+        inventory_type = None
+    if status in ("", "ALL", "all"):
+        status = None
 
     if module and not auth_service.can_access_warehouse(current_user, module):
         raise HTTPException(status_code=403, detail="No tenés acceso a esa bodega")
@@ -410,6 +416,12 @@ def update_asset(
             setattr(asset, field, [acc.dict() for acc in value] if value else [])
         else:
             setattr(asset, field, value)
+
+    # Si la categoría no fue asignada explícitamente pero se completó descripción o marca, clasificar automáticamente
+    if not asset.category and (asset.description or asset.brand_model):
+        auto_cat = classify_asset(asset.description, asset.brand_model)
+        if auto_cat:
+            asset.category = auto_cat
 
     if update.purchase_price is not None:
         asset.value_source = models.ValueSourceEnum.MANUAL
