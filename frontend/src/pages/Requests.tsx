@@ -4,8 +4,8 @@ import {
   CheckCircle2, XCircle, FileText
 } from 'lucide-react';
 import {
-  getAssetRequests, assignAssetRequest, rejectAssetRequest, getAssets,
-  CATEGORY_LABELS, type AssetRequest, type Asset,
+  getAssetRequests, assignAssetRequest, rejectAssetRequest, getAssets, getAssetByCode,
+  CATEGORY_LABELS, STATUS_LABELS, type AssetRequest, type Asset,
 } from '../api';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
@@ -48,13 +48,15 @@ const Requests = () => {
   const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({});
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [lookupLoading, setLookupLoading] = useState<Record<number, boolean>>({});
+  const [lookupFeedback, setLookupFeedback] = useState<Record<number, { type: 'success' | 'warning' | 'error'; message: string; asset?: Asset }>>({});
 
   const load = () => {
     setLoading(true);
-    Promise.all([getAssetRequests(), getAssets(module), getAssets()])
-      .then(([reqs, assets, allAssets]) => {
+    Promise.all([getAssetRequests(), getAssets()])
+      .then(([reqs, allAssets]) => {
         setRequests(reqs);
-        setAvailableAssets(assets.filter(a => a.status === 'available'));
+        setAvailableAssets(allAssets.filter(a => a.status === 'available'));
         setBusyAssets(allAssets.filter(a => a.status === 'assigned' || a.status === 'loaned'));
       })
       .catch((err) => setError(err.message))
@@ -63,15 +65,104 @@ const Requests = () => {
 
   useEffect(load, [module]);
 
-  const assetsFor = (req: AssetRequest) =>
-    req.category_requested
-      ? availableAssets.filter(a => a.category === req.category_requested)
+  const warehouseAssetsFor = (req: AssetRequest) => {
+    return req.module
+      ? availableAssets.filter(a => a.module === req.module)
       : availableAssets;
+  };
+
+  const assetsFor = (req: AssetRequest) => {
+    const whAssets = warehouseAssetsFor(req);
+    const catAssets = req.category_requested
+      ? whAssets.filter(a => a.category === req.category_requested)
+      : whAssets;
+    return catAssets.length > 0 ? catAssets : whAssets;
+  };
 
   const inUseFor = (req: AssetRequest) =>
     req.category_requested
       ? busyAssets.filter(a => a.category === req.category_requested)
       : [];
+
+  const handleLookupCode = async (req: AssetRequest, rawCode: string) => {
+    const code = rawCode.trim();
+    if (!code) return;
+
+    // 1. Buscar en memoria primero (coincidencia de código exacto)
+    const localMatch = availableAssets.find(
+      a => a.unique_code.toLowerCase() === code.toLowerCase()
+    );
+
+    if (localMatch) {
+      setSelectedAsset(prev => ({ ...prev, [req.id]: String(localMatch.id) }));
+      setLookupFeedback(prev => ({
+        ...prev,
+        [req.id]: {
+          type: 'success',
+          message: `Activo seleccionado: ${localMatch.unique_code} — ${localMatch.description}${localMatch.brand_model ? ` (${localMatch.brand_model})` : ''}`,
+          asset: localMatch,
+        }
+      }));
+      return;
+    }
+
+    // 2. Si no está en memoria, consultar a la API directamente
+    setLookupLoading(prev => ({ ...prev, [req.id]: true }));
+    try {
+      const asset = await getAssetByCode(code);
+      if (asset.status === 'available') {
+        setAvailableAssets(prev => prev.some(x => x.id === asset.id) ? prev : [...prev, asset]);
+        setSelectedAsset(prev => ({ ...prev, [req.id]: String(asset.id) }));
+        setLookupFeedback(prev => ({
+          ...prev,
+          [req.id]: {
+            type: 'success',
+            message: `Activo encontrado y seleccionado: ${asset.unique_code} — ${asset.description}${asset.brand_model ? ` (${asset.brand_model})` : ''}`,
+            asset,
+          }
+        }));
+      } else {
+        const statusName = STATUS_LABELS[asset.status] || asset.status;
+        setLookupFeedback(prev => ({
+          ...prev,
+          [req.id]: {
+            type: 'warning',
+            message: `El activo ${asset.unique_code} (${asset.description}) existe pero no está Disponible. Estado actual: ${statusName}.`,
+            asset,
+          }
+        }));
+      }
+    } catch {
+      setLookupFeedback(prev => ({
+        ...prev,
+        [req.id]: {
+          type: 'error',
+          message: `No se encontró ningún activo con el código "${code}" en el sistema.`,
+        }
+      }));
+    } finally {
+      setLookupLoading(prev => ({ ...prev, [req.id]: false }));
+    }
+  };
+
+  const handleSearchCodeChange = (req: AssetRequest, val: string) => {
+    setSearchTerms(prev => ({ ...prev, [req.id]: val }));
+    const trimmed = val.trim();
+    if (trimmed.length >= 3) {
+      const match = availableAssets.find(a => a.unique_code.toLowerCase() === trimmed.toLowerCase());
+      if (match) {
+        setSelectedAsset(prev => ({ ...prev, [req.id]: String(match.id) }));
+        setLookupFeedback(prev => ({
+          ...prev,
+          [req.id]: {
+            type: 'success',
+            message: `Activo seleccionado: ${match.unique_code} — ${match.description}`,
+            asset: match,
+          }
+        }));
+      }
+    }
+  };
 
   const handleAssign = async (req: AssetRequest) => {
     const assetId = selectedAsset[req.id];
@@ -537,34 +628,184 @@ const Requests = () => {
                     </div>
 
                     {/* Step 1: Search and select asset */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-                      <input
-                        type="text"
-                        placeholder="Buscar por código o descripción disponible..."
-                        className="input-field"
-                        style={{ padding: '10px 14px' }}
-                        value={searchTerms[req.id] || ''}
-                        onChange={(e) => setSearchTerms({ ...searchTerms, [req.id]: e.target.value })}
-                      />
-                      <select
-                        className="input-field"
-                        style={{ padding: '10px 14px' }}
-                        value={selectedAsset[req.id] ?? ''}
-                        onChange={(e) => setSelectedAsset({ ...selectedAsset, [req.id]: e.target.value })}
-                      >
-                        <option value="">
-                          {options.length === 0 ? 'No hay activos disponibles de esa categoría' : 'Elegir activo disponible...'}
-                        </option>
-                        {options
-                          .filter(a => {
-                            const term = (searchTerms[req.id] || '').toLowerCase();
-                            return a.unique_code.toLowerCase().includes(term) || (a.description || '').toLowerCase().includes(term);
-                          })
-                          .map(a => (
-                          <option key={a.id} value={a.id}>{a.unique_code} — {a.description}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {(() => {
+                      const whAvailable = warehouseAssetsFor(req);
+                      const term = (searchTerms[req.id] || '').toLowerCase().trim();
+                      const candidatePool = term
+                        ? (whAvailable.some(a => a.unique_code.toLowerCase().includes(term) || (a.description || '').toLowerCase().includes(term))
+                            ? whAvailable
+                            : availableAssets
+                          ).filter(a => a.unique_code.toLowerCase().includes(term) || (a.description || '').toLowerCase().includes(term))
+                        : whAvailable;
+
+                      const catMatches = candidatePool.filter(a => req.category_requested && a.category === req.category_requested);
+                      const otherMatches = candidatePool.filter(a => !req.category_requested || a.category !== req.category_requested);
+                      const selectedAssetObj = availableAssets.find(a => String(a.id) === String(selectedAsset[req.id])) || lookupFeedback[req.id]?.asset;
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <input
+                                type="text"
+                                placeholder="Digita o escanea código (ej: FU-0679)..."
+                                className="input-field"
+                                style={{ padding: '10px 14px', flex: 1 }}
+                                value={searchTerms[req.id] || ''}
+                                onChange={(e) => handleSearchCodeChange(req, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleLookupCode(req, searchTerms[req.id] || '');
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                style={{ padding: '8px 14px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                                disabled={!searchTerms[req.id]?.trim() || lookupLoading[req.id]}
+                                onClick={() => handleLookupCode(req, searchTerms[req.id] || '')}
+                                title="Buscar y llamar activo por código exacto"
+                              >
+                                {lookupLoading[req.id] ? 'Buscando...' : 'Llamar Activo'}
+                              </button>
+                            </div>
+
+                            <select
+                              className="input-field"
+                              style={{ padding: '10px 14px' }}
+                              value={selectedAsset[req.id] ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedAsset({ ...selectedAsset, [req.id]: val });
+                                if (val) {
+                                  const found = availableAssets.find(x => String(x.id) === val);
+                                  if (found) {
+                                    setLookupFeedback(prev => ({
+                                      ...prev,
+                                      [req.id]: {
+                                        type: 'success',
+                                        message: `Activo seleccionado: ${found.unique_code} — ${found.description}`,
+                                        asset: found,
+                                      }
+                                    }));
+                                  }
+                                }
+                              }}
+                            >
+                              <option value="">
+                                {candidatePool.length === 0
+                                  ? (term ? `Sin coincidencias para "${searchTerms[req.id]}"` : 'No hay activos disponibles en esta bodega')
+                                  : 'Elegir activo disponible de la lista...'}
+                              </option>
+                              {catMatches.length > 0 && (
+                                <optgroup label={`Sugeridos (Categoría: ${req.category_requested ? (CATEGORY_LABELS[req.category_requested] || req.category_requested) : 'Solicitada'})`}>
+                                  {catMatches.map(a => (
+                                    <option key={a.id} value={a.id}>{a.unique_code} — {a.description}</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              {otherMatches.length > 0 && (
+                                <optgroup label={catMatches.length > 0 ? 'Otros activos disponibles en bodega' : 'Todos los activos disponibles en bodega'}>
+                                  {otherMatches.map(a => (
+                                    <option key={a.id} value={a.id}>
+                                      {a.unique_code} — {a.description} {a.brand_model ? `(${a.brand_model})` : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </select>
+                          </div>
+
+                          {/* Visual feedback of selected asset or error */}
+                          {lookupFeedback[req.id] && (
+                            <div style={{
+                              fontSize: '0.85rem',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              background: lookupFeedback[req.id].type === 'success'
+                                ? 'rgba(52, 199, 89, 0.12)'
+                                : lookupFeedback[req.id].type === 'warning'
+                                ? 'rgba(255, 149, 0, 0.12)'
+                                : 'rgba(255, 59, 48, 0.12)',
+                              color: lookupFeedback[req.id].type === 'success'
+                                ? 'var(--success)'
+                                : lookupFeedback[req.id].type === 'warning'
+                                ? 'var(--warning)'
+                                : 'var(--danger)',
+                              border: `1px solid ${
+                                lookupFeedback[req.id].type === 'success'
+                                  ? 'rgba(52, 199, 89, 0.3)'
+                                  : lookupFeedback[req.id].type === 'warning'
+                                  ? 'rgba(255, 149, 0, 0.3)'
+                                  : 'rgba(255, 59, 48, 0.3)'
+                              }`
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {lookupFeedback[req.id].type === 'success' ? (
+                                  <CheckCircle2 size={16} />
+                                ) : lookupFeedback[req.id].type === 'warning' ? (
+                                  <Info size={16} />
+                                ) : (
+                                  <XCircle size={16} />
+                                )}
+                                <span>{lookupFeedback[req.id].message}</span>
+                              </div>
+                              {selectedAsset[req.id] && (
+                                <button
+                                  type="button"
+                                  className="btn btn-outline"
+                                  style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto' }}
+                                  onClick={() => {
+                                    setSelectedAsset(prev => { const n = { ...prev }; delete n[req.id]; return n; });
+                                    setLookupFeedback(prev => { const n = { ...prev }; delete n[req.id]; return n; });
+                                  }}
+                                >
+                                  Cambiar
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {selectedAssetObj && !lookupFeedback[req.id] && (
+                            <div style={{
+                              background: 'rgba(52, 199, 89, 0.12)',
+                              border: '1px solid rgba(52, 199, 89, 0.3)',
+                              color: 'var(--success)',
+                              fontSize: '0.85rem',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <CheckCircle2 size={16} />
+                                <span>
+                                  Activo a entregar: <strong style={{ color: 'var(--text-primary)' }}>{selectedAssetObj.unique_code}</strong> — {selectedAssetObj.description} {selectedAssetObj.brand_model ? `(${selectedAssetObj.brand_model})` : ''}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-outline"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto' }}
+                                onClick={() => {
+                                  setSelectedAsset(prev => { const n = { ...prev }; delete n[req.id]; return n; });
+                                }}
+                              >
+                                Cambiar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Step 2: Categorization of destination within company vs exit */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
