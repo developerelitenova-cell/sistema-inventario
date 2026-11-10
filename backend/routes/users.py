@@ -22,10 +22,16 @@ def _resolve_warehouses(db: Session, keys: List[str]) -> List["models.Warehouse"
 def _assert_scoped_admin_can_assign(admin: "models.User", role: "models.RoleEnum", warehouse_keys: List[str]) -> None:
     """Un admin acotado a su bodega no puede crear/promover a otro admin,
     ni otorgar acceso a bodegas fuera de su propio alcance."""
-    if auth_service.is_master_admin(admin):
+    is_admin = (
+        admin.role == models.RoleEnum.ADMIN
+        or (isinstance(admin.role, str) and admin.role.lower() == "admin")
+        or auth_service.is_master_admin(admin)
+    )
+    if is_admin:
         return
-    if role == models.RoleEnum.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo el administrador maestro puede asignar el rol Administrador")
+    role_val = role.value if hasattr(role, "value") else str(role)
+    if role_val == models.RoleEnum.ADMIN.value:
+        raise HTTPException(status_code=403, detail="Solo los administradores pueden asignar el rol Administrador")
     own_keys = set(auth_service.visible_warehouse_keys(admin) or [])
     if not set(warehouse_keys).issubset(own_keys):
         raise HTTPException(status_code=403, detail="No podés otorgar acceso a una bodega que vos mismo no administrás")
@@ -35,29 +41,15 @@ def validate_corporate_email(email: str = None) -> None:
     if not email:
         return
     email = email.strip().lower()
-    if "@" not in email:
+    if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Formato de correo electrónico inválido")
-    domain = email.split("@")[-1]
-    allowed = [
-        "elitenutrition.com.co",
-        "elitenovagroup.com",
-        "futupro.com",
-        "futupro.com.co",
-        "futupro.co",
-        "example.com",
-    ]
-    if domain not in allowed and not any(domain.endswith("." + d) for d in allowed):
-        raise HTTPException(
-            status_code=400,
-            detail="Solo se permiten correos corporativos oficiales (@elitenutrition.com.co, @futupro.com, @elitenovagroup.com)"
-        )
 
 
 @router.post("/users/", response_model=schemas.User)
 def create_user(
     user: schemas.UserCreate,
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
     validate_corporate_email(user.email)
 
@@ -164,17 +156,22 @@ def update_user(
     user_id: int,
     update: schemas.UserUpdate,
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if not auth_service.is_master_admin(_admin):
+    is_admin = (
+        _admin.role == models.RoleEnum.ADMIN
+        or (isinstance(_admin.role, str) and _admin.role.lower() == "admin")
+        or auth_service.is_master_admin(_admin)
+    )
+    if not is_admin:
         own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
         target_keys = {w.key for w in user.warehouses}
         # Si el usuario ya tiene bodegas, debe coincidir al menos una con own_keys.
-        # Si no tiene bodegas asignadas aún, el admin de bodega puede vincularlo a sus bodegas.
+        # Si no tiene bodegas asignadas aún, el encargado puede vincularlo a sus bodegas.
         if target_keys and not (own_keys & target_keys):
             raise HTTPException(status_code=403, detail="No tenés permisos para gestionar un usuario de otra bodega")
         _assert_scoped_admin_can_assign(
@@ -182,6 +179,17 @@ def update_user(
             update.role if update.role is not None else user.role,
             update.warehouse_keys if update.warehouse_keys is not None else list(target_keys),
         )
+
+    # Validar unicidad y formato de nombre de usuario (login)
+    if update.username is not None and update.username.strip().lower() != (user.username or "").strip().lower():
+        cleaned_username = update.username.strip().lower()
+        existing_username = db.query(models.User).filter(
+            models.User.username == cleaned_username,
+            models.User.id != user_id
+        ).first()
+        if existing_username:
+            raise HTTPException(status_code=400, detail="Ese nombre de usuario ya está registrado por otro usuario")
+        user.username = cleaned_username
 
     # Validar unicidad y formato de correo electrónico
     if update.email is not None and update.email.strip().lower() != (user.email or "").strip().lower():
@@ -216,6 +224,11 @@ def update_user(
                 models.Asset.responsible_name == old_full_name
             ).update({models.Asset.responsible_name: new_name}, synchronize_session=False)
 
+    # Actualizar contraseña si se proporcionó una nueva
+    if update.password and update.password.strip():
+        user.password_hash = auth_service.hash_password(update.password.strip())
+        db.query(models.AuthToken).filter(models.AuthToken.user_id == user.id).delete()
+
     # Procesar foto de perfil si viene Base64 o URL
     if update.photo_url is not None:
         p_val = update.photo_url
@@ -246,13 +259,18 @@ def update_user(
 def reset_password(
     user_id: int,
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+    _admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO)),
 ):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if not auth_service.is_master_admin(_admin):
+    is_admin = (
+        _admin.role == models.RoleEnum.ADMIN
+        or (isinstance(_admin.role, str) and _admin.role.lower() == "admin")
+        or auth_service.is_master_admin(_admin)
+    )
+    if not is_admin:
         own_keys = set(auth_service.visible_warehouse_keys(_admin) or [])
         target_keys = {w.key for w in user.warehouses}
         if not (own_keys & target_keys):

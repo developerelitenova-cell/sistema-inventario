@@ -47,6 +47,7 @@ class User(UserBase):
         from_attributes = True
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = None
     full_name: Optional[str] = None
     document_id: Optional[str] = None
     cargo: Optional[str] = None
@@ -55,8 +56,9 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     email: Optional[str] = None
     photo_url: Optional[str] = None
+    password: Optional[str] = None
 
-    @field_validator("email", "cargo", "full_name", "document_id", "photo_url", mode="before")
+    @field_validator("username", "email", "cargo", "full_name", "document_id", "photo_url", "password", mode="before")
     @classmethod
     def clean_empty_strings(cls, v):
         if isinstance(v, str) and not v.strip():

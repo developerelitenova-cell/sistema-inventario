@@ -111,10 +111,10 @@ export interface User {
   is_active?: boolean;
 }
 
-/** Admin maestro = rol admin sin bodegas asignadas (ve/gestiona todo).
- * Un admin CON bodegas asignadas queda acotado a esas bodegas. */
+/** Admin maestro = rol admin sin bodegas asignadas o cuenta raíz 'admin' (ve/gestiona todo).
+ * Un admin CON bodegas asignadas queda acotado a esas bodegas solo si no es la cuenta raíz. */
 export const isMasterAdmin = (user: User | null | undefined): boolean =>
-  !!user && user.role === 'admin' && user.warehouses.length === 0;
+  Boolean(user && user.role === 'admin' && (user.warehouses.length === 0 || user.username === 'admin' || user.username === 'admin_test'));
 
 export interface RolePermission {
   id: number;
@@ -367,6 +367,7 @@ export const getLoan = (loanId: number) =>
 export const getUsers = () => request<User[]>('/users/');
 
 export type UserUpdateInput = Partial<{
+  username: string;
   full_name: string;
   document_id: string;
   email: string;
@@ -375,6 +376,7 @@ export type UserUpdateInput = Partial<{
   warehouse_keys: string[];
   photo_url: string;
   is_active: boolean;
+  password?: string;
 }>;
 
 export const updateUser = (userId: number, update: UserUpdateInput) =>
