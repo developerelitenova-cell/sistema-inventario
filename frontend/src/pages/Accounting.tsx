@@ -15,10 +15,12 @@ import {
   User as UserIcon,
   X,
   FileSpreadsheet,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import {
   getAssets,
+  purgeUnregisteredAssets,
   formatCOP,
   CATEGORY_LABELS,
   STATUS_LABELS,
@@ -54,11 +56,19 @@ const Accounting = () => {
   const isMaster = isMasterAdmin(currentUser);
   const isAuthorized = isAdmin || isEncargado;
 
-  // Selección de bodega: 'ALL' para ver consolidado o clave específica
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
+  // Selección de bodega: 'ALL' únicamente permitido para Master Admin; de lo contrario primera bodega autorizada
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>(() => {
+    if (!isMaster) {
+      if (contextModule) return contextModule;
+      if (warehouses && warehouses.length > 0) return warehouses[0].key;
+      return 'futupro';
+    }
+    return 'ALL';
+  });
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [purging, setPurging] = useState(false);
 
   // Modo de visualización: Interactivo vs Informe Ejecutivo Gerencial (Listo para Imprimir / PDF)
   const [viewMode, setViewMode] = useState<'interactive' | 'executive_report'>('interactive');
@@ -96,14 +106,17 @@ const Accounting = () => {
     return 'Sin categorizar';
   };
 
-  // Inicializar bodega seleccionada según rol
+  // Inicializar y garantizar bodega seleccionada según rol (solo master admin puede ver ALL)
   useEffect(() => {
-    if (!isMaster && warehouses.length === 1) {
-      setSelectedWarehouse(warehouses[0].key);
-    } else if (contextModule && selectedWarehouse === 'ALL' && !isMaster) {
-      setSelectedWarehouse(contextModule);
+    if (!isMaster) {
+      if (selectedWarehouse === 'ALL' || (warehouses.length > 0 && !warehouses.some(w => w.key === selectedWarehouse))) {
+        const nextWh = (contextModule && warehouses.some(w => w.key === contextModule))
+          ? contextModule
+          : (warehouses[0]?.key || 'futupro');
+        setSelectedWarehouse(nextWh);
+      }
     }
-  }, [warehouses, contextModule, isMaster]);
+  }, [warehouses, contextModule, isMaster, selectedWarehouse]);
 
   // Carga de activos desde la API
   const loadAssets = () => {
@@ -155,6 +168,18 @@ const Accounting = () => {
   // Filtrado de activos
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
+      // Excluir automáticamente registros de inventario no registrados realmente (pre-generados sin datos)
+      const hasRealDesc = Boolean(
+        asset.description 
+        && asset.description.trim() 
+        && !['sin descripción', 'sin descripcion', 'sin categorizar'].includes(asset.description.trim().toLowerCase())
+      );
+      const hasRealPhoto = Boolean(asset.photo_url || asset.appsheet_photo_ref);
+      const hasRealVal = Boolean(asset.purchase_price || asset.estimated_value || asset.value);
+      if (!hasRealDesc && !hasRealPhoto && !hasRealVal && asset.status === 'pending_registration') {
+        return false;
+      }
+
       // Búsqueda por texto
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -422,6 +447,27 @@ const Accounting = () => {
     window.print();
   };
 
+  // Purgar datos no registrados realmente (pre-generados sin datos ni valoración)
+  const handlePurgeData = async () => {
+    const scopeName = selectedWarehouse === 'ALL'
+      ? 'todas las bodegas'
+      : `la bodega ${labels[selectedWarehouse] || selectedWarehouse}`;
+
+    const msg = `¿Deseas purgar los registros no registrados en ${scopeName}?\n\nEsta acción eliminará únicamente códigos pre-generados vacíos (sin descripción real, sin fotos y sin valoración), conservando el 100% de los activos reales.`;
+    if (!window.confirm(msg)) return;
+
+    setPurging(true);
+    try {
+      const res = await purgeUnregisteredAssets(selectedWarehouse === 'ALL' ? undefined : selectedWarehouse);
+      window.alert(res.message);
+      loadAssets();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPurging(false);
+    }
+  };
+
   // Redirección si el usuario no tiene permisos
   if (!isAuthorized) {
     return <Navigate to="/dashboard" replace />;
@@ -477,20 +523,38 @@ const Accounting = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Selector de Bodega para el Informe Ejecutivo */}
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-amber-300 shadow-sm">
+                <Building2 size={16} className="text-amber-700" />
+                <span className="text-xs font-semibold uppercase text-gray-600">Bodega:</span>
+                <select
+                  value={selectedWarehouse}
+                  onChange={(e) => setSelectedWarehouse(e.target.value)}
+                  className="bg-transparent font-medium text-xs outline-none cursor-pointer text-gray-900"
+                >
+                  {isMaster && (
+                    <option value="ALL">🏢 Consolidado General (Todas)</option>
+                  )}
+                  {warehouses.map(w => (
+                    <option key={w.key} value={w.key}>📍 {w.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <button
-                className="btn btn-outline flex items-center gap-2"
+                className="btn btn-outline flex items-center gap-2 text-xs"
                 onClick={() => setViewMode('interactive')}
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={15} />
                 Volver al Panel Interactivo
               </button>
 
               <button
-                className="btn btn-primary flex items-center gap-2 shadow-md hover:shadow-lg"
+                className="btn btn-primary flex items-center gap-2 shadow-md hover:shadow-lg text-xs"
                 onClick={handlePrint}
               >
-                <Printer size={18} />
+                <Printer size={16} />
                 Imprimir / Guardar PDF
               </button>
             </div>
@@ -503,12 +567,12 @@ const Accounting = () => {
               <div className="flex items-center gap-4">
                 <img
                   src={selectedWarehouse === 'futupro' ? logoFutu : logoNova}
-                  alt="Elite Nutrition"
+                  alt="Logo Empresa"
                   className="h-14 w-auto object-contain"
                 />
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 uppercase">
-                    Elite Nutrition & Futu Pro
+                    {selectedWarehouse === 'futupro' ? 'FUTU PRO' : (selectedWarehouse === 'ALL' ? 'ELITE NUTRITION & FUTU PRO' : (labels[selectedWarehouse] || 'ELITE NUTRITION'))}
                   </h1>
                   <p className="text-xs font-semibold text-amber-700 tracking-wider uppercase">
                     Sistema Central de Gestión de Activos y Control de Inventarios
@@ -724,8 +788,8 @@ const Accounting = () => {
                   className="bg-transparent font-medium text-sm outline-none cursor-pointer pr-2"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  {(isMaster || warehouses.length > 1) && (
-                    <option value="ALL">🏢 Todas las Bodegas (Consolidado)</option>
+                  {isMaster && (
+                    <option value="ALL">🏢 Todas las Bodegas (Consolidado General)</option>
                   )}
                   {warehouses.map(w => (
                     <option key={w.key} value={w.key}>
@@ -734,6 +798,19 @@ const Accounting = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Botón Purgar Datos No Registrados */}
+              {isAdmin && (
+                <button
+                  className="btn btn-outline flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all text-xs"
+                  onClick={handlePurgeData}
+                  disabled={purging}
+                  title="Purga códigos pre-generados o vacíos que no tienen datos reales de inventario"
+                >
+                  <Trash2 size={16} />
+                  <span>{purging ? 'Purgando...' : 'Purgar no registrados'}</span>
+                </button>
+              )}
 
               {/* Botón Exportar a Excel */}
               <button

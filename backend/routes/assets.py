@@ -199,9 +199,14 @@ def get_assets(
     if module:
         query = query.filter(models.Asset.module == module)
     else:
-        allowed = auth_service.visible_warehouse_keys(current_user)
-        if allowed is not None:
-            query = query.filter(models.Asset.module.in_(allowed))
+        # Solo el Administrador Maestro puede consultar el consolidado general de todas las bodegas.
+        # Los administradores de bodega y encargados quedan acotados a sus bodegas visibles.
+        if not auth_service.is_master_admin(current_user):
+            allowed = auth_service.visible_warehouse_keys(current_user)
+            if allowed is not None:
+                query = query.filter(models.Asset.module.in_(allowed))
+            else:
+                query = query.filter(models.Asset.module == "__none__")
 
     if status:
         try:
@@ -287,9 +292,14 @@ def get_unused_assets(
     if module:
         query = query.filter(models.Asset.module == module)
     else:
-        allowed = auth_service.visible_warehouse_keys(current_user)
-        if allowed is not None:
-            query = query.filter(models.Asset.module.in_(allowed))
+        # Solo el Administrador Maestro puede consultar el consolidado general de todas las bodegas.
+        # Los administradores de bodega y encargados quedan acotados a sus bodegas visibles.
+        if not auth_service.is_master_admin(current_user):
+            allowed = auth_service.visible_warehouse_keys(current_user)
+            if allowed is not None:
+                query = query.filter(models.Asset.module.in_(allowed))
+            else:
+                query = query.filter(models.Asset.module == "__none__")
 
     results = []
     for asset in query.all():
@@ -657,3 +667,55 @@ def restore_asset(
     db.commit()
     db.refresh(asset)
     return asset
+
+
+@router.post("/assets/purge-unregistered")
+def purge_unregistered_assets(
+    module: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN)),
+):
+    """Purga de activos vacíos o no registrados realmente (códigos pre-generados sin descripción ni valoración ni fotos ni préstamos).
+    Solo admin maestro puede purgar todas las bodegas. Un admin de bodega solo puede purgar la suya."""
+    if module in ("", "ALL", "all"):
+        module = None
+
+    if not auth_service.is_master_admin(admin):
+        if not module:
+            raise HTTPException(status_code=403, detail="Solo el Administrador Maestro puede purgar datos de todas las bodegas")
+        if not auth_service.can_access_warehouse(admin, module):
+            raise HTTPException(status_code=403, detail="No tenés permiso para purgar datos de esta bodega")
+
+    loan_asset_ids = {x[0] for x in db.query(models.Loan.asset_id).distinct().all()}
+    assignment_asset_ids = {x[0] for x in db.query(models.AssetAssignment.asset_id).distinct().all()}
+
+    query = db.query(models.Asset)
+    if module:
+        query = query.filter(models.Asset.module == module)
+    elif not auth_service.is_master_admin(admin):
+        allowed = auth_service.visible_warehouse_keys(admin) or []
+        query = query.filter(models.Asset.module.in_(allowed))
+
+    all_assets = query.all()
+    ids_to_purge = []
+    for a in all_assets:
+        has_desc = bool(
+            a.description 
+            and a.description.strip() 
+            and a.description.strip().lower() not in ('sin descripción', 'sin descripcion', 'sin categorizar')
+        )
+        has_photo = bool(a.photo_url or a.appsheet_photo_ref)
+        has_value = bool(a.purchase_price or a.estimated_value or a.value)
+        has_loans = a.id in loan_asset_ids
+        has_assignments = a.id in assignment_asset_ids
+        
+        # Un activo es un registro fantasma si no tiene descripción real, ni fotos, ni valor comercial/compra, ni préstamos, ni asignaciones
+        if not has_desc and not has_photo and not has_value and not has_loans and not has_assignments:
+            ids_to_purge.append(a.id)
+
+    if ids_to_purge:
+        deleted = db.query(models.Asset).filter(models.Asset.id.in_(ids_to_purge)).delete(synchronize_session=False)
+        audit.log_action(db, admin, "assets.purged", f"{admin.full_name} purgó {deleted} activos no registrados en {module or 'todas las bodegas'}")
+        db.commit()
+        return {"purged_count": deleted, "message": f"Se purgaron exitosamente {deleted} activos no registrados"}
+    return {"purged_count": 0, "message": "No se encontraron activos no registrados para purgar"}

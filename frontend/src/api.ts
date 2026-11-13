@@ -234,6 +234,13 @@ export const getAssets = (module?: Module, options?: GetAssetsOptions) => {
   return request<Asset[]>(`/assets/${qs ? `?${qs}` : ''}`);
 };
 
+export const purgeUnregisteredAssets = (module?: Module) => {
+  const qs = module && module !== 'ALL' ? `?module=${encodeURIComponent(module)}` : '';
+  return request<{ purged_count: number; message: string }>(`/assets/purge-unregistered${qs}`, {
+    method: 'POST',
+  });
+};
+
 export interface AssetAvailability {
   available_count: number;
   busy_count: number;
