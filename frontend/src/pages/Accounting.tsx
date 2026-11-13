@@ -16,7 +16,9 @@ import {
   X,
   FileSpreadsheet,
   Pencil,
-  Trash2
+  Trash2,
+  FileText,
+  Layers
 } from 'lucide-react';
 import {
   getAssets,
@@ -72,6 +74,8 @@ const Accounting = () => {
 
   // Modo de visualización: Interactivo vs Informe Ejecutivo Gerencial (Listo para Imprimir / PDF)
   const [viewMode, setViewMode] = useState<'interactive' | 'executive_report'>('interactive');
+  // Formato del informe: 'summary' (resumido ejecutivo) vs 'detailed' (detallado completo renglón por renglón)
+  const [reportFormat, setReportFormat] = useState<'summary' | 'detailed'>('summary');
 
   // Filtros avanzados
   const [searchQuery, setSearchQuery] = useState('');
@@ -328,6 +332,10 @@ const Accounting = () => {
     };
     // Desgloses por Estado
     const statusBreakdown: Record<string, number> = {};
+    // Desgloses por Categoría
+    const categoryBreakdown: Record<string, { name: string; count: number; purchase: number; estimated: number }> = {};
+    // Desgloses por Área
+    const areaBreakdown: Record<string, { name: string; count: number; purchase: number; estimated: number }> = {};
 
     filteredAssets.forEach(asset => {
       const pPrice = asset.purchase_price || 0;
@@ -364,6 +372,34 @@ const Accounting = () => {
         typeBreakdown[tKey].estimated += eValue;
       }
 
+      // Agrupación por categoría
+      const cLabel = getAssetCategoryLabel(asset);
+      if (!categoryBreakdown[cLabel]) {
+        categoryBreakdown[cLabel] = {
+          name: cLabel,
+          count: 0,
+          purchase: 0,
+          estimated: 0,
+        };
+      }
+      categoryBreakdown[cLabel].count++;
+      categoryBreakdown[cLabel].purchase += pPrice;
+      categoryBreakdown[cLabel].estimated += eValue;
+
+      // Agrupación por área
+      const aLabel = asset.area || 'General';
+      if (!areaBreakdown[aLabel]) {
+        areaBreakdown[aLabel] = {
+          name: aLabel,
+          count: 0,
+          purchase: 0,
+          estimated: 0,
+        };
+      }
+      areaBreakdown[aLabel].count++;
+      areaBreakdown[aLabel].purchase += pPrice;
+      areaBreakdown[aLabel].estimated += eValue;
+
       // Agrupación por estado
       const sKey = asset.status || 'unknown';
       statusBreakdown[sKey] = (statusBreakdown[sKey] || 0) + 1;
@@ -381,6 +417,8 @@ const Accounting = () => {
       missingValuesCount,
       warehouseBreakdown: Object.values(warehouseBreakdown),
       typeBreakdown,
+      categoryBreakdown: Object.values(categoryBreakdown).sort((a, b) => b.count - a.count),
+      areaBreakdown: Object.values(areaBreakdown).sort((a, b) => b.count - a.count),
       statusBreakdown,
     };
   }, [filteredAssets, assets, labels]);
@@ -549,6 +587,36 @@ const Accounting = () => {
                 </select>
               </div>
 
+              {/* Selector de Formato de Documento: Resumido vs Detallado */}
+              <div className="flex items-center bg-white p-1 rounded-xl border border-amber-300 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setReportFormat('summary')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    reportFormat === 'summary'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="Informe sintético ejecutivo con tablas consolidadas (ideal para gerencia)"
+                >
+                  <FileText size={14} />
+                  Resumido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportFormat('detailed')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    reportFormat === 'detailed'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="Informe completo renglón por renglón con el detalle individual de cada activo"
+                >
+                  <Layers size={14} />
+                  Detallado
+                </button>
+              </div>
+
               <button
                 className="btn btn-outline flex items-center gap-2 text-xs"
                 onClick={() => setViewMode('interactive')}
@@ -591,6 +659,7 @@ const Accounting = () => {
                 <p><span className="font-semibold text-gray-800">Fecha de Emisión:</span> {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                 <p><span className="font-semibold text-gray-800">Generado Por:</span> {currentUser?.full_name || currentUser?.username} ({currentUser?.role?.toUpperCase()})</p>
                 <p><span className="font-semibold text-gray-800">Sede / Bodega:</span> {selectedWarehouse === 'ALL' ? 'CONSOLIDADO GENERAL (TODAS LAS BODEGAS)' : (labels[selectedWarehouse] || selectedWarehouse)}</p>
+                <p><span className="font-semibold text-gray-800">Tipo de Documento:</span> <span className="font-bold text-amber-800">{reportFormat === 'summary' ? 'Informe Resumido Ejecutivo' : 'Informe Detallado de Auditoría'}</span></p>
                 {(dateFrom || dateTo) && (
                   <p><span className="font-semibold text-gray-800">Período de Compra:</span> {dateFrom || 'Inicio'} al {dateTo || 'Hoy'}</p>
                 )}
@@ -599,18 +668,27 @@ const Accounting = () => {
 
             {/* Título y Objetivo del Informe */}
             <div className="my-6">
-              <h2 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-tight">
-                INFORME GENERAL DE ACTIVOS E INVENTARIO PATRIMONIAL
-              </h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 uppercase tracking-tight">
+                  {reportFormat === 'summary'
+                    ? 'INFORME EJECUTIVO RESUMIDO DE INVENTARIO Y PATRIMONIO'
+                    : 'INFORME GENERAL DETALLADO DE ACTIVOS E INVENTARIO PATRIMONIAL'}
+                </h2>
+                <span className="self-start md:self-auto text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-200">
+                  {reportFormat === 'summary' ? 'MODO RESUMIDO (DIRECTIVO)' : 'MODO DETALLADO (AUDITORÍA)'}
+                </span>
+              </div>
               <p className="text-xs text-gray-600 mt-1">
-                Documento oficial de control patrimonial presentado a la Gerencia General y Propietario. Contiene el detalle de todos los activos, muebles y material inventariado ingresado al sistema, con su respectiva valoración comercial y ubicación.
+                {reportFormat === 'summary'
+                  ? 'Documento condensado de control patrimonial y financiero para la Alta Dirección y Junta. Presenta el consolidado estructurado de activos clasificados por tipo, categoría, área y sede.'
+                  : 'Documento oficial de control patrimonial detallado presentado a la Gerencia General y Propietario. Contiene el desglose individual renglón por renglón de cada activo ingresado al sistema, con su respectiva valoración comercial y ubicación.'}
               </p>
             </div>
 
             {/* Resumen Ejecutivo de Cifras */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-amber-50/50 border border-amber-200/60 mb-6 text-xs">
               <div>
-                <p className="text-gray-500 font-medium">Total Activos Listados</p>
+                <p className="text-gray-500 font-medium">Total Activos Reales</p>
                 <p className="text-lg font-bold text-gray-900">{stats.count} unidades</p>
               </div>
               <div>
@@ -627,8 +705,9 @@ const Accounting = () => {
               </div>
             </div>
 
-            {/* Cuadro Resumen por Tipo de Inventario (Muebles vs Equipos vs Publicitario) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs">
+            {/* Cuadros Resumen Principales (Tipo de Inventario y Bodega / Estado) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 text-xs">
+              {/* Distribución por Tipo de Inventario */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="bg-gray-100/80 px-4 py-2 font-bold text-gray-800 border-b border-gray-200">
                   Distribución por Tipo de Inventario
@@ -646,7 +725,7 @@ const Accounting = () => {
                     {Object.entries(stats.typeBreakdown).map(([tKey, val]) => (
                       <tr key={tKey}>
                         <td className="p-2.5 font-medium text-gray-800">{INVENTORY_TYPE_LABELS[tKey as InventoryType] || tKey}</td>
-                        <td className="p-2.5 text-center">{val.count}</td>
+                        <td className="p-2.5 text-center font-bold text-gray-900">{val.count}</td>
                         <td className="p-2.5 text-right">{formatCOP(val.purchase)}</td>
                         <td className="p-2.5 text-right font-medium text-amber-800">{formatCOP(val.estimated)}</td>
                       </tr>
@@ -655,7 +734,7 @@ const Accounting = () => {
                 </table>
               </div>
 
-              {/* Cuadro Resumen por Bodega */}
+              {/* Distribución por Bodega / Sede */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="bg-gray-100/80 px-4 py-2 font-bold text-gray-800 border-b border-gray-200">
                   Distribución por Bodega / Sede
@@ -673,7 +752,7 @@ const Accounting = () => {
                     {stats.warehouseBreakdown.map((wh) => (
                       <tr key={wh.name}>
                         <td className="p-2.5 font-medium text-gray-800">{wh.name}</td>
-                        <td className="p-2.5 text-center">{wh.count}</td>
+                        <td className="p-2.5 text-center font-bold text-gray-900">{wh.count}</td>
                         <td className="p-2.5 text-right">{formatCOP(wh.purchase)}</td>
                         <td className="p-2.5 text-right font-medium text-amber-800">{formatCOP(wh.estimated)}</td>
                       </tr>
@@ -683,65 +762,128 @@ const Accounting = () => {
               </div>
             </div>
 
-            {/* Tabla Detallada de Inventario Formal */}
-            <div className="overflow-x-auto border border-gray-200 rounded-xl mb-12">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 border-b border-gray-200 uppercase tracking-wider font-semibold">
-                    <th className="p-2.5">Código</th>
-                    <th className="p-2.5">Descripción y Modelo</th>
-                    <th className="p-2.5">Tipo</th>
-                    <th className="p-2.5">Categoría</th>
-                    <th className="p-2.5">Bodega / Área</th>
-                    <th className="p-2.5">Responsable</th>
-                    <th className="p-2.5">Estado</th>
-                    <th className="p-2.5 text-right">P. Compra</th>
-                    <th className="p-2.5 text-right">V. Estimado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {sortedAssets.map((asset, idx) => (
-                    <tr key={asset.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      <td className="p-2.5 font-mono font-bold text-gray-900 whitespace-nowrap">
-                        {asset.unique_code}
-                      </td>
-                      <td className="p-2.5">
-                        <div className="font-medium text-gray-900">{asset.description || 'Sin descripción'}</div>
-                        <div className="text-[11px] text-gray-500 font-medium">Marca: {asset.brand_model || 'No especificada'}</div>
-                      </td>
-                      <td className="p-2.5 whitespace-nowrap">
-                        <span className="font-medium text-gray-700">
-                          {INVENTORY_TYPE_LABELS[asset.inventory_type] || asset.inventory_type}
-                        </span>
-                      </td>
-                      <td className="p-2.5 whitespace-nowrap">
-                        <span className="font-medium text-gray-700">
-                          {getAssetCategoryLabel(asset)}
-                        </span>
-                      </td>
-                      <td className="p-2.5">
-                        <div className="font-medium text-gray-800">{labels[asset.module] || asset.module}</div>
-                        <div className="text-[11px] text-gray-500">{asset.area || 'General'}</div>
-                      </td>
-                      <td className="p-2.5 text-gray-700">
-                        {asset.responsible_name || 'En custodia de bodega'}
-                      </td>
-                      <td className="p-2.5 whitespace-nowrap">
-                        <span className="font-semibold text-gray-800">
-                          {STATUS_LABELS[asset.status] || asset.status}
-                        </span>
-                      </td>
-                      <td className="p-2.5 text-right whitespace-nowrap">
-                        {asset.purchase_price ? formatCOP(asset.purchase_price) : '-'}
-                      </td>
-                      <td className="p-2.5 text-right font-medium text-amber-800 whitespace-nowrap">
-                        {asset.estimated_value ? formatCOP(asset.estimated_value) : (asset.value ? formatCOP(asset.value) : '-')}
-                      </td>
+            {/* SECCIÓN EXCLUSIVA DE INFORME RESUMIDO: Desglose por Categoría y por Área */}
+            {reportFormat === 'summary' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs">
+                {/* Cuadro por Categorías Principales */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-100/80 px-4 py-2 font-bold text-gray-800 border-b border-gray-200">
+                    Distribución por Categoría de Activo
+                  </div>
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-gray-600 border-b">
+                      <tr>
+                        <th className="p-2.5">Categoría</th>
+                        <th className="p-2.5 text-center">Unidades</th>
+                        <th className="p-2.5 text-right">Inversión Compra</th>
+                        <th className="p-2.5 text-right">Valor Estimado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {stats.categoryBreakdown.slice(0, 10).map((cat) => (
+                        <tr key={cat.name}>
+                          <td className="p-2.5 font-medium text-gray-800">{cat.name}</td>
+                          <td className="p-2.5 text-center font-bold text-gray-900">{cat.count}</td>
+                          <td className="p-2.5 text-right">{formatCOP(cat.purchase)}</td>
+                          <td className="p-2.5 text-right font-medium text-amber-800">{formatCOP(cat.estimated)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Cuadro por Estado Operativo y Áreas */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-100/80 px-4 py-2 font-bold text-gray-800 border-b border-gray-200">
+                    Distribución por Estado Operativo
+                  </div>
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-gray-600 border-b">
+                      <tr>
+                        <th className="p-2.5">Estado</th>
+                        <th className="p-2.5 text-center">Unidades</th>
+                        <th className="p-2.5 text-right">% del Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {Object.entries(stats.statusBreakdown).map(([sKey, count]) => (
+                        <tr key={sKey}>
+                          <td className="p-2.5 font-medium text-gray-800">
+                            {STATUS_LABELS[sKey as AssetStatus] || sKey}
+                          </td>
+                          <td className="p-2.5 text-center font-bold text-gray-900">{count}</td>
+                          <td className="p-2.5 text-right text-gray-600 font-mono">
+                            {stats.count > 0 ? `${((count / stats.count) * 100).toFixed(1)}%` : '0%'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SECCIÓN EXCLUSIVA DE INFORME DETALLADO: Tabla Completa Renglón por Renglón */}
+            {reportFormat === 'detailed' && (
+              <div className="overflow-x-auto border border-gray-200 rounded-xl mb-12">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 text-gray-700 border-b border-gray-200 uppercase tracking-wider font-semibold">
+                      <th className="p-2.5">Código</th>
+                      <th className="p-2.5">Descripción y Modelo</th>
+                      <th className="p-2.5">Tipo</th>
+                      <th className="p-2.5">Categoría</th>
+                      <th className="p-2.5">Bodega / Área</th>
+                      <th className="p-2.5">Responsable</th>
+                      <th className="p-2.5">Estado</th>
+                      <th className="p-2.5 text-right">P. Compra</th>
+                      <th className="p-2.5 text-right">V. Estimado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {sortedAssets.map((asset, idx) => (
+                      <tr key={asset.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                        <td className="p-2.5 font-mono font-bold text-gray-900 whitespace-nowrap">
+                          {asset.unique_code}
+                        </td>
+                        <td className="p-2.5">
+                          <div className="font-medium text-gray-900">{asset.description || 'Sin descripción'}</div>
+                          <div className="text-[11px] text-gray-500 font-medium">Marca: {asset.brand_model || 'No especificada'}</div>
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          <span className="font-medium text-gray-700">
+                            {INVENTORY_TYPE_LABELS[asset.inventory_type] || asset.inventory_type}
+                          </span>
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          <span className="font-medium text-gray-700">
+                            {getAssetCategoryLabel(asset)}
+                          </span>
+                        </td>
+                        <td className="p-2.5">
+                          <div className="font-medium text-gray-800">{labels[asset.module] || asset.module}</div>
+                          <div className="text-[11px] text-gray-500">{asset.area || 'General'}</div>
+                        </td>
+                        <td className="p-2.5 text-gray-700">
+                          {asset.responsible_name || 'En custodia de bodega'}
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          <span className="font-semibold text-gray-800">
+                            {STATUS_LABELS[asset.status] || asset.status}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-right whitespace-nowrap">
+                          {asset.purchase_price ? formatCOP(asset.purchase_price) : '-'}
+                        </td>
+                        <td className="p-2.5 text-right font-medium text-amber-800 whitespace-nowrap">
+                          {asset.estimated_value ? formatCOP(asset.estimated_value) : (asset.value ? formatCOP(asset.value) : '-')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Bloque de Firmas Formales para la Alta Dirección */}
             <div className="grid grid-cols-2 gap-16 pt-12 border-t-2 border-gray-200 text-xs">
@@ -830,16 +972,34 @@ const Accounting = () => {
                 <span>Exportar Excel ({sortedAssets.length})</span>
               </button>
 
-              {/* Botón Vista Informe Gerencial / PDF */}
-              <button
-                className="btn btn-outline flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
-                onClick={() => setViewMode('executive_report')}
-                disabled={sortedAssets.length === 0}
-                title="Generar formato ejecutivo formal con membrete para el dueño"
-              >
-                <Printer size={18} />
-                <span>Informe Gerencial / PDF</span>
-              </button>
+              {/* Botones Vista Informe Gerencial / PDF: Resumido y Detallado */}
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn btn-outline flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all text-xs"
+                  onClick={() => {
+                    setReportFormat('summary');
+                    setViewMode('executive_report');
+                  }}
+                  disabled={sortedAssets.length === 0}
+                  title="Generar formato ejecutivo condensado con cifras y cuadros de resumen para gerencia"
+                >
+                  <FileText size={15} />
+                  <span>Informe Resumido</span>
+                </button>
+
+                <button
+                  className="btn btn-outline flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all text-xs"
+                  onClick={() => {
+                    setReportFormat('detailed');
+                    setViewMode('executive_report');
+                  }}
+                  disabled={sortedAssets.length === 0}
+                  title="Generar formato detallado de auditoría con la relación renglón por renglón de cada activo"
+                >
+                  <Layers size={15} />
+                  <span>Informe Detallado</span>
+                </button>
+              </div>
             </div>
           </div>
 
