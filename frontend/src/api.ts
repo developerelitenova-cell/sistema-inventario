@@ -221,6 +221,7 @@ export interface GetAssetsOptions {
   category?: string;
   status?: string;
   search?: string;
+  exclude_pending?: boolean;
 }
 
 export const getAssets = (module?: Module, options?: GetAssetsOptions) => {
@@ -230,6 +231,7 @@ export const getAssets = (module?: Module, options?: GetAssetsOptions) => {
   if (options?.category && options.category !== 'ALL') params.append('category', options.category);
   if (options?.status && options.status !== 'ALL') params.append('status', options.status);
   if (options?.search) params.append('search', options.search);
+  if (options?.exclude_pending) params.append('exclude_pending', 'true');
   const qs = params.toString();
   return request<Asset[]>(`/assets/${qs ? `?${qs}` : ''}`);
 };

@@ -264,6 +264,7 @@ def get_asset_by_code(
 def get_assets(
     module: Optional[str] = None,
     include_inactive: bool = False,
+    exclude_pending: bool = False,
     search: Optional[str] = None,
     status: Optional[str] = None,
     category: Optional[str] = None,
@@ -291,6 +292,13 @@ def get_assets(
     query = db.query(models.Asset)
     if not include_inactive:
         query = query.filter(models.Asset.is_active == True)
+
+    if exclude_pending:
+        query = query.filter(
+            models.Asset.status != models.AssetStatusEnum.PENDING_REGISTRATION,
+            models.Asset.description.isnot(None),
+            ~func.lower(models.Asset.description).in_(["", "pendiente de registro", "pendiente", "sin descripción", "sin descripcion", "sin categorizar", "none", "na", "n/a", "prueba"])
+        )
 
     if module:
         query = query.filter(models.Asset.module == module)

@@ -127,7 +127,7 @@ const Accounting = () => {
     setLoading(true);
     setError(null);
     const targetModule = selectedWarehouse === 'ALL' ? undefined : selectedWarehouse;
-    getAssets(targetModule)
+    getAssets(targetModule, { exclude_pending: true })
       .then(setAssets)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -172,19 +172,16 @@ const Accounting = () => {
   // Filtrado de activos
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
-      // Excluir códigos pre-generados que aún no tienen un activo real asignado de la empresa
-      if (asset.status === 'pending_registration') {
+      // Excluir estrictamente códigos pre-generados o que aún no tienen un activo real registrado
+      const statusLower = (asset.status || '').toLowerCase();
+      if (statusLower === 'pending_registration') {
         return false;
       }
       const descLower = (asset.description || '').trim().toLowerCase();
-      const hasRealDesc = Boolean(
-        asset.description 
-        && descLower 
-        && !['sin descripción', 'sin descripcion', 'sin categorizar', 'pendiente de registro', 'pendiente', 'na', 'n/a', 'prueba', 'none'].includes(descLower)
-      );
-      const hasRealPhoto = Boolean(asset.photo_url || asset.appsheet_photo_ref);
-      const hasRealVal = Boolean(asset.purchase_price || asset.estimated_value || asset.value);
-      if (!hasRealDesc && !hasRealPhoto && !hasRealVal) {
+      if (
+        !descLower ||
+        ['sin descripción', 'sin descripcion', 'sin categorizar', 'pendiente de registro', 'pendiente', 'na', 'n/a', 'prueba', 'none'].includes(descLower)
+      ) {
         return false;
       }
 
