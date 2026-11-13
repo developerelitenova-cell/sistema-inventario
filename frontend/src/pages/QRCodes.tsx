@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, Printer, Sparkles, Building2, CheckCircle2, Clock, Layers } from "lucide-react";
 import { getAssets, batchGenerateAssets, type Asset, type Module } from "../api";
 import { useModule } from "../moduleContext";
@@ -19,6 +20,7 @@ const getAccentColor = (moduleKey: string): string => {
 };
 
 const QRCodes = () => {
+  const navigate = useNavigate();
   const { module, setModule } = useModule();
   const { warehouses, labels } = useWarehouses();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -244,9 +246,29 @@ const QRCodes = () => {
                 {/* Diferenciador visual en pantalla (se oculta al imprimir) */}
                 <div className="no-print sticker-status-pill">
                   {isPending ? (
-                    <span style={{ color: "#d97706", fontWeight: 600 }}>⏳ Espera de Registro</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/assets/new?code=${encodeURIComponent(asset.unique_code)}&module=${encodeURIComponent(asset.module)}`)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "0.72rem",
+                        padding: "3px 8px",
+                        background: "#fef3c7",
+                        color: "#92400e",
+                        border: "1px solid #fcd34d",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        transition: "all 0.15s ease"
+                      }}
+                      title="Haz clic para registrar y darle vida a este código QR"
+                    >
+                      ✨ Dar de alta / Registrar
+                    </button>
                   ) : (
-                    <span style={{ color: "#15803d", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                    <span style={{ color: "#15803d", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }} title={asset.description || "Dado de Alta"}>
                       ✅ {asset.description || "Dado de Alta"}
                     </span>
                   )}

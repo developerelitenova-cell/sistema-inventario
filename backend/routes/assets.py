@@ -35,7 +35,56 @@ def create_asset(
 
     db_asset = db.query(models.Asset).filter(models.Asset.unique_code == clean_code).first()
     if db_asset:
-        raise HTTPException(status_code=400, detail="Activo ya registrado con este código")
+        is_pending = (
+            db_asset.status == models.AssetStatusEnum.PENDING_REGISTRATION
+            or (db_asset.description or "").strip().lower() in ("", "pendiente de registro", "pendiente", "sin descripción", "sin descripcion", "sin categorizar")
+        )
+        if not is_pending:
+            raise HTTPException(status_code=400, detail="Activo ya registrado con este código. Para modificarlo, usa la opción de editar.")
+
+        # Darle vida al activo pre-generado existente:
+        if not auth_service.can_access_warehouse(_user, asset.module):
+            raise HTTPException(status_code=403, detail="No podés registrar activos en una bodega a la que no tenés acceso")
+
+        photo_url = asset.photo_url
+        if photo_url and photo_url.startswith("data:image"):
+            uploaded = upload_base64_image(photo_url, "inventory-assets", "assets/photos", f"{clean_code}_photo")
+            if uploaded:
+                photo_url = uploaded
+
+        additional_photos_uploaded = []
+        if getattr(asset, 'additional_photos', None):
+            for idx, p in enumerate(asset.additional_photos):
+                if p and p.startswith("data:image"):
+                    upl = upload_base64_image(p, "inventory-assets", "assets/photos", f"{clean_code}_add_{idx}")
+                    if upl:
+                        additional_photos_uploaded.append(upl)
+                elif p:
+                    additional_photos_uploaded.append(p)
+
+        category = asset.category or classify_asset(asset.description, asset.brand_model)
+
+        db_asset.description = asset.description
+        db_asset.brand_model = asset.brand_model
+        db_asset.photo_url = photo_url or db_asset.photo_url
+        db_asset.additional_photos = additional_photos_uploaded or db_asset.additional_photos
+        db_asset.status = asset.status if asset.status != models.AssetStatusEnum.PENDING_REGISTRATION else models.AssetStatusEnum.AVAILABLE
+        db_asset.module = asset.module
+        db_asset.area = asset.area
+        db_asset.responsible_name = asset.responsible_name
+        db_asset.accessories = [acc.dict() for acc in asset.accessories] if asset.accessories else []
+        db_asset.observations = asset.observations
+        db_asset.category = category
+        db_asset.inventory_type = asset.inventory_type or db_asset.inventory_type or models.InventoryTypeEnum.ACTIVOS
+        db_asset.purchase_price = asset.purchase_price
+        db_asset.purchase_date = asset.purchase_date
+        db_asset.value_source = models.ValueSourceEnum.MANUAL if asset.purchase_price else models.ValueSourceEnum.DESCONOCIDO
+        db_asset.is_active = True
+
+        audit.log_action(db, _user, "asset.registered_from_qr", f"{_user.full_name} dio de alta el activo con código QR {clean_code} ({db_asset.description})", entity_type="asset", entity_id=db_asset.id)
+        db.commit()
+        db.refresh(db_asset)
+        return db_asset
 
     if not auth_service.can_access_warehouse(_user, asset.module):
         raise HTTPException(status_code=403, detail="No podés crear activos en una bodega a la que no tenés acceso")
@@ -76,6 +125,7 @@ def create_asset(
         accessories=[acc.dict() for acc in asset.accessories] if asset.accessories else [],
         observations=asset.observations,
         category=category,
+        inventory_type=asset.inventory_type or models.InventoryTypeEnum.ACTIVOS,
         purchase_price=asset.purchase_price,
         purchase_date=asset.purchase_date,
         value_source=models.ValueSourceEnum.MANUAL if asset.purchase_price else models.ValueSourceEnum.DESCONOCIDO,

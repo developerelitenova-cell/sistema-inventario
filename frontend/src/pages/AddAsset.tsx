@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Package } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Camera, Package, Sparkles } from 'lucide-react';
 import { createAsset, estimateAssetValueWithAI, getAreaOptions, INVENTORY_TYPE_LABELS, CATEGORY_LABELS, type Module, type Asset, type InventoryType, type Category } from '../api';
 import { useModule } from '../moduleContext';
 import { useWarehouses } from '../warehouseContext';
@@ -8,10 +8,14 @@ import CameraCapture from '../components/CameraCapture';
 
 const AddAsset = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const codeFromUrl = searchParams.get('code') || '';
+  const moduleFromUrl = searchParams.get('module') || '';
+
   const { module: currentModule } = useModule();
   const { warehouses } = useWarehouses();
   const [form, setForm] = useState({
-    unique_code: '',
+    unique_code: codeFromUrl,
     description: '',
     brand_model: '',
     area: '',
@@ -23,7 +27,7 @@ const AddAsset = () => {
     inventory_type: 'activos' as InventoryType,
     category: '' as Category | '',
   });
-  const [assetModule, setAssetModule] = useState<Module>(currentModule);
+  const [assetModule, setAssetModule] = useState<Module>(moduleFromUrl || currentModule);
 
 
   const [allowedWarehouses, setAllowedWarehouses] = useState(warehouses);
@@ -43,6 +47,15 @@ const AddAsset = () => {
       }
     });
   }, [warehouses, assetModule]);
+
+  useEffect(() => {
+    if (codeFromUrl) {
+      setForm(f => ({ ...f, unique_code: codeFromUrl }));
+    }
+    if (moduleFromUrl) {
+      setAssetModule(moduleFromUrl);
+    }
+  }, [codeFromUrl, moduleFromUrl]);
 
   // Mantener el área dentro de las opciones válidas de la bodega elegida
   // (cambia cuando cambia de bodega, y arranca con la primera por defecto).
@@ -247,6 +260,25 @@ const AddAsset = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="glass-panel" style={{ maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {codeFromUrl && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            border: '1px solid #fcd34d',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#78350f'
+          }}>
+            <Sparkles size={20} color="#b45309" />
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.9rem' }}>¡Dándole vida a un código QR pre-generado!</strong>
+              <span style={{ fontSize: '0.8rem' }}>Completá los datos del activo físico para activarlo oficialmente con el código <b>{codeFromUrl}</b>.</span>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '12px' }}>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Código único *</div>
