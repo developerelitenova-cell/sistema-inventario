@@ -5,6 +5,35 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.5.0] - 2026-11-13
+
+### Añadido
+* **Informes Ejecutivos Duales (Resumido y Detallado) para Gerencia y Dirección:**
+  * Modo **Informe Resumido**: Documento condensado de 1 a 2 páginas diseñado para Junta Directiva y Gerencia General, con cifras clave, distribución por tipo de inventario, bodega, categorías principales de activos, estados operativos y bloque de firmas formales.
+  * Modo **Informe Detallado**: Informe exhaustivo de auditoría con la relación individual renglón por renglón de cada activo físico registrado (código, descripción, marca, tipo, categoría, ubicación, responsable, estado, costo de compra y valor estimado).
+  * Selector interactivo de formato para alternar en tiempo real entre Resumido y Detallado tanto en el panel como en la vista de impresión/PDF.
+* **Soberanía y Filtrado Multi-Bodega en Informes:**
+  * Selector dinámico de bodega/sede en la barra superior del informe ejecutivo.
+  * Adaptación automática de membrete oficial, logotipo (Futu Pro vs Elite Nova Group) y cifras consolidadas según la bodega seleccionada.
+  * Restricción estricta del informe consolidado general de todas las bodegas exclusivamente para el **Administrador Maestro**; los administradores y encargados de sede quedan acotados a sus bodegas autorizadas.
+* **Herramienta Administrativa de Depuración y Purga:**
+  * Endpoint `POST /assets/purge-unregistered` para depurar de forma segura códigos pre-generados vacíos.
+  * Botón *"Purgar no registrados"* en el panel de Contabilidad y Auditoría para administradores.
+
+### Corregido y Optimizado
+* **Purga de Activos Fantasma y Sinceramiento de Inventario:**
+  * Depuración en base de datos PostgreSQL de más de 1.900 códigos pre-generados que no tenían activos físicos de la empresa asociados, eliminando datos inflados y resolviendo el cruce de información en Futuro Pro y Elite Nutrición.
+  * Filtro estricto en el motor de reportes para excluir automáticamente cualquier código en estado `pending_registration` o sin datos reales de inventario.
+* **Gestión de Usuarios y Cambio de Gerente / Titular:**
+  * Rediseño completo de `UserEditModal` con layout optimizado, barra de acciones fija (*sticky footer*) y alertas de error visibles sin necesidad de scroll.
+  * Soporte para cambiar el nombre de usuario (`username`) y asignar o generar nuevas contraseñas con alternador de visibilidad.
+  * Sincronización y transferencia automática de la custodia de activos para mantener trazabilidad limpia cuando una nueva persona asume el cargo.
+  * Flexibilización de validación de correos electrónicos para admitir cualquier formato corporativo válido.
+* **Entrega y Asignación de Solicitudes por Código Directo:**
+  * Búsqueda y llamado instantáneo de activos por código (`getAssetByCode`) en la pantalla de entrega de solicitudes (`Requests.tsx`), permitiendo asignar cualquier activo disponible en la bodega sin bloqueos por categoría estricta.
+
+---
+
 ## [1.4.0] - 2026-09-30
 
 ### Añadido
