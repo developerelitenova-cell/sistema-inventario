@@ -1,9 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ScanLine, Search, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
+import { ScanLine, Search, CheckCircle2, Sparkles, ArrowRight, PlusCircle } from 'lucide-react';
 import { getAssetByCode, type Asset } from '../api';
+import { useModule } from '../moduleContext';
 import AssetEditModal from '../components/AssetEditModal';
+
+const extractCode = (raw: string): string => {
+  let val = raw.trim();
+  if (val.includes('code=')) {
+    const match = val.match(/code=([^&]+)/);
+    if (match) val = decodeURIComponent(match[1]);
+  } else if (val.includes('/by-code/')) {
+    val = val.split('/by-code/')[1].split('?')[0];
+  } else if (val.includes('/')) {
+    const parts = val.split('/');
+    val = parts[parts.length - 1];
+  }
+  return val.trim().toUpperCase();
+};
 
 const getNextSequentialCode = (code: string): string | null => {
   const match = code.match(/^([A-Za-z]+-?)(\d+)$/);
@@ -16,6 +31,8 @@ const getNextSequentialCode = (code: string): string | null => {
 };
 
 const RegisterByCode = () => {
+  const navigate = useNavigate();
+  const { module } = useModule();
   const [searchParams, setSearchParams] = useSearchParams();
   const codeParam = searchParams.get('code');
 
@@ -27,14 +44,14 @@ const RegisterByCode = () => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   const lookupCode = (code: string) => {
-    const trimmed = code.trim();
-    if (!trimmed) return;
+    const clean = extractCode(code);
+    if (!clean) return;
     setLoading(true);
     setError(null);
-    getAssetByCode(trimmed)
+    getAssetByCode(clean, { auto_create: true, module })
       .then((asset) => {
         setFoundAsset(asset);
-        setManualCode(trimmed);
+        setManualCode(clean);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
@@ -184,8 +201,17 @@ const RegisterByCode = () => {
       </form>
 
       {error && (
-        <div className="glass-panel" style={{ color: 'var(--danger-color)', marginTop: '16px', textAlign: 'center', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.3)' }}>
-          {error}
+        <div className="glass-panel" style={{ color: 'var(--danger-color)', marginTop: '16px', textAlign: 'center', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.3)', padding: '16px' }}>
+          <p style={{ margin: '0 0 12px', fontWeight: 500 }}>{error}</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
+            onClick={() => navigate(`/assets/new?code=${encodeURIComponent(manualCode.trim())}&module=${encodeURIComponent(module)}`)}
+          >
+            <PlusCircle size={16} />
+            Crear y dar de alta el código {manualCode.trim()}
+          </button>
         </div>
       )}
 

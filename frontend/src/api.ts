@@ -280,8 +280,13 @@ export interface AssetBatchGenerateInput {
 export const batchGenerateAssets = (payload: AssetBatchGenerateInput) =>
   request<Asset[]>('/assets/batch-generate', { method: 'POST', body: JSON.stringify(payload) });
 
-export const getAssetByCode = (code: string) =>
-  request<Asset>(`/assets/by-code/${encodeURIComponent(code)}`);
+export const getAssetByCode = (code: string, options?: { auto_create?: boolean; module?: string }) => {
+  const params = new URLSearchParams();
+  if (options?.auto_create) params.append('auto_create', 'true');
+  if (options?.module) params.append('module', options.module);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return request<Asset>(`/assets/by-code/${encodeURIComponent(code)}${qs}`);
+};
 
 export interface UnusedAsset {
   id: number;
