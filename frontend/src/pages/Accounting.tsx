@@ -168,15 +168,19 @@ const Accounting = () => {
   // Filtrado de activos
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
-      // Excluir automáticamente registros de inventario no registrados realmente (pre-generados sin datos)
+      // Excluir códigos pre-generados que aún no tienen un activo real asignado de la empresa
+      if (asset.status === 'pending_registration') {
+        return false;
+      }
+      const descLower = (asset.description || '').trim().toLowerCase();
       const hasRealDesc = Boolean(
         asset.description 
-        && asset.description.trim() 
-        && !['sin descripción', 'sin descripcion', 'sin categorizar'].includes(asset.description.trim().toLowerCase())
+        && descLower 
+        && !['sin descripción', 'sin descripcion', 'sin categorizar', 'pendiente de registro', 'pendiente', 'na', 'n/a', 'prueba', 'none'].includes(descLower)
       );
       const hasRealPhoto = Boolean(asset.photo_url || asset.appsheet_photo_ref);
       const hasRealVal = Boolean(asset.purchase_price || asset.estimated_value || asset.value);
-      if (!hasRealDesc && !hasRealPhoto && !hasRealVal && asset.status === 'pending_registration') {
+      if (!hasRealDesc && !hasRealPhoto && !hasRealVal) {
         return false;
       }
 
@@ -365,9 +369,12 @@ const Accounting = () => {
       statusBreakdown[sKey] = (statusBreakdown[sKey] || 0) + 1;
     });
 
+    const totalPendingCodes = assets.filter(a => a.status === 'pending_registration').length;
+
     return {
       count: filteredAssets.length,
       totalAssetsLoaded: assets.length,
+      totalPendingCodes,
       totalPurchasePrice,
       totalEstimatedValue,
       totalPatrimonialValue,
@@ -376,7 +383,7 @@ const Accounting = () => {
       typeBreakdown,
       statusBreakdown,
     };
-  }, [filteredAssets, assets.length, labels]);
+  }, [filteredAssets, assets, labels]);
 
   // Alternar ordenamiento por columna
   const handleSort = (field: SortField) => {
@@ -851,11 +858,16 @@ const Accounting = () => {
                 <Package size={26} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Activos Filtrados</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Activos de la Empresa</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.count}</p>
-                  <span className="text-xs text-[var(--text-tertiary)]">de {stats.totalAssetsLoaded} en total</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">activos reales</span>
                 </div>
+                {stats.totalPendingCodes > 0 && (
+                  <p className="text-[11px] text-amber-700 font-medium mt-0.5">
+                    🏷️ {stats.totalPendingCodes} códigos pendientes de asignar
+                  </p>
+                )}
               </div>
             </div>
 
