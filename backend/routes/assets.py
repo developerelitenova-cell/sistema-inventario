@@ -33,6 +33,16 @@ def create_asset(
     if not clean_code:
         raise HTTPException(status_code=400, detail="El código del activo no puede estar vacío")
 
+    # Deducir bodega por prefijo oficial si aplica
+    if clean_code.startswith("FU-"):
+        asset.module = "futupro"
+    elif clean_code.startswith("EL-"):
+        asset.module = "elite_nutricion"
+    elif clean_code.startswith("ES-"):
+        asset.module = "estudio"
+    elif clean_code.startswith("ESTADIO-"):
+        asset.module = "estadio"
+
     db_asset = db.query(models.Asset).filter(models.Asset.unique_code == clean_code).first()
     if db_asset:
         is_pending = (
@@ -219,19 +229,21 @@ def get_asset_by_code(
         if not auto_create:
             raise HTTPException(status_code=404, detail=f"Código '{clean_code}' no encontrado en el sistema")
 
-        target_module = module
+        target_module = None
+        if clean_code.startswith("FU-"):
+            target_module = "futupro"
+        elif clean_code.startswith("EL-"):
+            target_module = "elite_nutricion"
+        elif clean_code.startswith("ES-"):
+            target_module = "estudio"
+        elif clean_code.startswith("ESTADIO-"):
+            target_module = "estadio"
+        else:
+            target_module = module
+
         if not target_module:
-            if clean_code.startswith("FU-"):
-                target_module = "futupro"
-            elif clean_code.startswith("EL-"):
-                target_module = "elite_nutricion"
-            elif clean_code.startswith("ES-"):
-                target_module = "estudio"
-            elif clean_code.startswith("ESTADIO-"):
-                target_module = "estadio"
-            else:
-                user_whs = auth_service.visible_warehouse_keys(_user)
-                target_module = user_whs[0] if user_whs and len(user_whs) == 1 else "futupro"
+            user_whs = auth_service.visible_warehouse_keys(_user)
+            target_module = user_whs[0] if user_whs and len(user_whs) == 1 else "futupro"
 
         if not auth_service.can_access_warehouse(_user, target_module):
             raise HTTPException(status_code=403, detail="No podés registrar activos en una bodega a la que no tenés acceso")
@@ -643,7 +655,8 @@ def verify_asset_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.require_role(models.RoleEnum.ADMIN, models.RoleEnum.ENCARGADO, models.RoleEnum.SALIDA)),
 ):
-    asset = db.query(models.Asset).filter(models.Asset.unique_code == unique_code).first()
+    clean_code = unique_code.strip().upper()
+    asset = db.query(models.Asset).filter(func.upper(models.Asset.unique_code) == clean_code).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Activo no encontrado")
 

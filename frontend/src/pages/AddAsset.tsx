@@ -75,6 +75,16 @@ const AddAsset = () => {
 
   const update = (field: keyof typeof form, value: any) => setForm({ ...form, [field]: value });
 
+  const handleCodeChange = (val: string) => {
+    update('unique_code', val);
+    const upper = val.trim().toUpperCase();
+    if (upper.startsWith('FU-')) {
+      if (allowedWarehouses.some(w => w.key === 'futupro')) setAssetModule('futupro');
+    } else if (upper.startsWith('EL-')) {
+      if (allowedWarehouses.some(w => w.key === 'elite_nutricion')) setAssetModule('elite_nutricion');
+    }
+  };
+
   const addAccessory = () => setForm(f => ({ ...f, accessories: [...f.accessories, { name: '' }] }));
   const updateAccessoryName = (index: number, val: string) => {
     const acc = [...form.accessories];
@@ -282,7 +292,7 @@ const AddAsset = () => {
         <div style={{ display: 'flex', gap: '12px' }}>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Código único *</div>
-            <input className="input-field" required value={form.unique_code} onChange={(e) => update('unique_code', e.target.value)} placeholder="ej. 821500" />
+            <input className="input-field" required value={form.unique_code} onChange={(e) => handleCodeChange(e.target.value)} placeholder="ej. FU-1050 o 821500" />
           </label>
           <label style={{ flex: 1 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Módulo</div>

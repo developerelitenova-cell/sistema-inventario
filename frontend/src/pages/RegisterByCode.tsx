@@ -8,6 +8,14 @@ import AssetEditModal from '../components/AssetEditModal';
 
 const extractCode = (raw: string): string => {
   let val = raw.trim();
+  if (val.startsWith('{') && val.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed.code || parsed.unique_code) {
+        val = parsed.code || parsed.unique_code;
+      }
+    } catch {}
+  }
   if (val.includes('code=')) {
     const match = val.match(/code=([^&]+)/);
     if (match) val = decodeURIComponent(match[1]);
@@ -17,6 +25,7 @@ const extractCode = (raw: string): string => {
     const parts = val.split('/');
     val = parts[parts.length - 1];
   }
+  val = val.replace(/\s+/g, '');
   return val.trim().toUpperCase();
 };
 
@@ -48,7 +57,8 @@ const RegisterByCode = () => {
     if (!clean) return;
     setLoading(true);
     setError(null);
-    getAssetByCode(clean, { auto_create: true, module })
+    const targetModule = clean.startsWith('FU-') ? 'futupro' : (clean.startsWith('EL-') ? 'elite_nutricion' : module);
+    getAssetByCode(clean, { auto_create: true, module: targetModule })
       .then((asset) => {
         setFoundAsset(asset);
         setManualCode(clean);
